@@ -21,8 +21,8 @@ func printUsage() {
         open-wispr --help             Show this help message
 
     HOTKEY EXAMPLES:
-        open-wispr set-hotkey globe             Globe/fn key (default)
-        open-wispr set-hotkey rightoption        Right Option key
+        open-wispr set-hotkey rightoption       Right Option key (default)
+        open-wispr set-hotkey globe             Globe/fn key
         open-wispr set-hotkey f5                 F5 key
         open-wispr set-hotkey ctrl+space         Ctrl + Space
 

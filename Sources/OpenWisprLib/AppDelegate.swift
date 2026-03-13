@@ -14,14 +14,20 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastStreamingText: String = ""
     private var streamingInsertedText: String = ""
     var config: Config!
+    var overlay: StreamingOverlay!
     var isPressed = false
     var isReady = false
+    var isLocked = false
+    private var tapCount = 0
+    private var tapTimer: Timer?
+    private var lastKeyDownTime: Date?
     public var lastTranscription: String?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         statusBar = StatusBarController()
         recorder = AudioRecorder()
         inserter = TextInserter()
+        overlay = StreamingOverlay()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.setup()
@@ -204,57 +210,107 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleKeyDown() {
-        NSLog("[OW] handleKeyDown called, isReady=%d, isPressed=%d", isReady ? 1 : 0, isPressed ? 1 : 0)
-        guard isReady, !isPressed else { return }
+        NSLog("[OW] handleKeyDown called, isReady=%d, isPressed=%d, isLocked=%d", isReady ? 1 : 0, isPressed ? 1 : 0, isLocked ? 1 : 0)
+        guard isReady else { return }
+        
+        if isLocked {
+            isLocked = false
+            finishRecording()
+            return
+        }
+        
+        guard !isPressed else { return }
         isPressed = true
-        // Delay recording start by 0.2s to ignore short/accidental presses
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self = self, self.isPressed else {
-                NSLog("[OW] handleKeyDown: released before 0.2s, ignoring")
-                return
-            }
-            self.statusBar.state = .recording
-            self.playStartSound()
-            do {
-                let outputURL: URL
-                if Config.effectiveMaxRecordings(self.config.maxRecordings) == 0 {
-                    outputURL = RecordingStore.tempRecordingURL()
-                } else {
-                    outputURL = RecordingStore.newRecordingURL()
-                }
-
-                // Set up streaming for GigaAM
-                if self.config.effectiveEngine == "gigaam" && self.config.effectiveStreaming {
-                    self.streamingBuffer = []
-                    self.lastStreamingText = ""
-                    self.streamingInsertedText = ""
-                    self.recorder.onAudioSamples = { [weak self] samples in
-                        self?.streamingBuffer.append(contentsOf: samples)
-                    }
-                    self.startStreamingTranscription()
-                } else {
-                    self.recorder.onAudioSamples = nil
-                }
-
-                NSLog("[OW] Starting recording to: %@", outputURL.path)
-                try self.recorder.startRecording(to: outputURL)
-                NSLog("[OW] Recording started OK")
-            } catch {
-                NSLog("[OW] Recording start error: %@", error.localizedDescription)
-                self.isPressed = false
-                self.statusBar.state = .idle
+        lastKeyDownTime = Date()
+        
+        // Delay recording start by 0.1s to ignore very short jitters
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self, self.isPressed || self.tapCount > 0 else { return }
+            
+            if self.statusBar.state != .recording {
+                self.startRecordingFlow()
             }
         }
     }
 
+    private func startRecordingFlow() {
+        self.statusBar.state = .recording
+        self.playStartSound()
+        do {
+            let outputURL: URL
+            if Config.effectiveMaxRecordings(self.config.maxRecordings) == 0 {
+                outputURL = RecordingStore.tempRecordingURL()
+            } else {
+                outputURL = RecordingStore.newRecordingURL()
+            }
+
+            // Set up streaming for GigaAM
+            if self.config.effectiveEngine == "gigaam" && self.config.effectiveStreaming {
+                self.streamingBuffer = []
+                self.lastStreamingText = ""
+                self.streamingInsertedText = ""
+                self.recorder.onAudioSamples = { [weak self] samples in
+                    self?.streamingBuffer.append(contentsOf: samples)
+                }
+                self.startStreamingTranscription()
+                DispatchQueue.main.async {
+                    self.overlay.show()
+                }
+            } else {
+                self.recorder.onAudioSamples = nil
+            }
+
+            NSLog("[OW] Starting recording to: %@", outputURL.path)
+            try self.recorder.startRecording(to: outputURL)
+            NSLog("[OW] Recording started OK")
+        } catch {
+            NSLog("[OW] Recording start error: %@", error.localizedDescription)
+            self.isPressed = false
+            self.statusBar.state = .idle
+        }
+    }
+
     private func handleKeyUp() {
-        NSLog("[OW] handleKeyUp called, isPressed=%d", isPressed ? 1 : 0)
+        NSLog("[OW] handleKeyUp called, isPressed=%d, isLocked=%d", isPressed ? 1 : 0, isLocked ? 1 : 0)
         guard isPressed else { return }
         isPressed = false
+        
+        let duration = Date().timeIntervalSince(lastKeyDownTime ?? Date())
+        
+        if duration < 0.4 {
+            // It's a short tap. Increment tap count and wait for potential double-tap
+            tapCount += 1
+            
+            tapTimer?.invalidate()
+            tapTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                if self.tapCount >= 2 {
+                    // Double tap detected! Lock recording.
+                    self.isLocked = true
+                    self.overlay.setLocked(true)
+                    NSLog("[OW] Recording LOCKED")
+                } else if !self.isPressed {
+                    // Single tap finished and no second tap came. Stop recording.
+                    self.finishRecording()
+                }
+                self.tapCount = 0
+            }
+        } else {
+            // Long press (PTT). Finish immediately on release.
+            finishRecording()
+        }
+    }
 
+    private func finishRecording() {
+        NSLog("[OW] finishRecording called")
+        
         // Stop streaming transcription timer
         stopStreamingTranscription()
         recorder.onAudioSamples = nil
+        DispatchQueue.main.async {
+            self.overlay.setLocked(false)
+            self.overlay.hide()
+        }
 
         guard let audioURL = recorder.stopRecording() else {
             NSLog("[OW] stopRecording returned nil (short press, no recording)")
@@ -287,27 +343,11 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 if self.config.effectiveEngine == "gigaam" {
                     // For GigaAM, do final transcription from the accumulated buffer
                     NSLog("[OW] Calling gigaam final transcribe on %d samples...", self.streamingBuffer.count)
-                    let fullRaw: String
                     if self.streamingBuffer.count > 4800 {
-                        fullRaw = try self.gigaamTranscriber.transcribe(samples: self.streamingBuffer)
+                        raw = try self.gigaamTranscriber.transcribe(samples: self.streamingBuffer)
                     } else {
-                        fullRaw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
+                        raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
                     }
-                    
-                    // Subtract what we already inserted during streaming
-                    let textToInsert: String
-                    if self.config.effectiveStreaming && !self.streamingInsertedText.isEmpty {
-                        if fullRaw.lowercased().hasPrefix(self.streamingInsertedText.lowercased()) {
-                            textToInsert = String(fullRaw.dropFirst(self.streamingInsertedText.count))
-                        } else {
-                            // If model significantly changed its mind, just insert with a space
-                            textToInsert = " " + fullRaw
-                        }
-                    } else {
-                        textToInsert = fullRaw
-                    }
-                    
-                    raw = textToInsert
                     self.streamingBuffer = []
                 } else {
                     NSLog("[OW] Calling whisper transcribe...")
@@ -348,8 +388,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Streaming Transcription
 
     private func startStreamingTranscription() {
-        // Transcribe every 2 seconds while recording
-        streamingTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        // Transcribe every 0.5 seconds for smooth UI updates
+        streamingTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.performStreamingTranscription()
         }
     }
@@ -361,7 +401,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func performStreamingTranscription() {
         let buffer = streamingBuffer
-        guard buffer.count > 16000 else { return }  // at least 1.0s
+        guard (isPressed || isLocked), buffer.count > 8000 else { return }  // at least 0.5s and still recording
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -370,24 +410,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 let currentText = result.cumulativeText
                 
                 if !currentText.isEmpty && currentText != self.lastStreamingText {
-                    // Calculate what's new
-                    let newPart: String
-                    if currentText.lowercased().hasPrefix(self.streamingInsertedText.lowercased()) {
-                        newPart = String(currentText.dropFirst(self.streamingInsertedText.count))
-                    } else {
-                        // Model corrected itself - we can't easily backspace, 
-                        // so we just append the new version with a space
-                        newPart = " " + currentText
-                    }
-                    
-                    if !newPart.isEmpty {
-                        self.streamingInsertedText += newPart
-                        self.lastStreamingText = currentText
-                        
-                        DispatchQueue.main.async {
-                            self.inserter.insert(text: newPart)
-                        }
-                    }
+                    self.lastStreamingText = currentText
+                    self.overlay.updateText(currentText)
                 }
             } catch {
                 NSLog("[OW] Streaming transcription error: %@", error.localizedDescription)
