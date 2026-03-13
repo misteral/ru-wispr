@@ -5,6 +5,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     var hotkeyManager: HotkeyManager?
     var recorder: AudioRecorder!
     var transcriber: Transcriber!
+    var gigaamTranscriber: GigaAMTranscriber!
     var inserter: TextInserter!
     var config: Config!
     var isPressed = false
@@ -36,6 +37,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         }
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
+        gigaamTranscriber = GigaAMTranscriber(gigaamPath: config.gigaamPath, modelPath: config.modelPath)
 
         DispatchQueue.main.async {
             self.statusBar.reprocessHandler = { [weak self] url in
@@ -44,9 +46,16 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             self.statusBar.buildMenu()
         }
 
-        if Transcriber.findWhisperBinary() == nil {
-            print("Error: whisper-cpp not found. Install it with: brew install whisper-cpp")
-            return
+        if config.effectiveEngine == "gigaam" {
+            if !GigaAMTranscriber.isAvailable(path: config.gigaamPath) {
+                print("Error: gigaam-transcribe not found. Set 'gigaamPath' in config.")
+                return
+            }
+        } else {
+            if Transcriber.findWhisperBinary() == nil {
+                print("Error: whisper-cpp not found. Install it with: brew install whisper-cpp")
+                return
+            }
         }
 
         let wasStale = Permissions.isAccessibilityStale()
@@ -77,7 +86,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             print("Accessibility: granted")
         }
 
-        if !Transcriber.modelExists(modelSize: config.modelSize) {
+        if config.effectiveEngine == "whisper" && !Transcriber.modelExists(modelSize: config.modelSize) {
             DispatchQueue.main.async {
                 self.statusBar.state = .downloading
                 self.statusBar.updateDownloadProgress("Downloading \(self.config.modelSize) model...")
@@ -116,7 +125,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         let hotkeyDesc = KeyCodes.describe(keyCode: config.hotkey.keyCode, modifiers: config.hotkey.modifiers)
         print("open-wispr v\(OpenWispr.version)")
         print("Hotkey: \(hotkeyDesc)")
-        print("Model: \(config.modelSize)")
+        print("Engine: \(config.effectiveEngine)")
+        if config.effectiveEngine == "gigaam" {
+            print("GigaAM: \(config.gigaamPath ?? GigaAMTranscriber.findGigaAMBinary() ?? "auto")")
+        } else {
+            print("Model: \(config.modelSize)")
+        }
         print("Ready.")
     }
 
@@ -124,6 +138,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         config = Config.load()
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
+        gigaamTranscriber = GigaAMTranscriber(gigaamPath: config.gigaamPath, modelPath: config.modelPath)
 
         hotkeyManager?.stop()
         hotkeyManager = HotkeyManager(
@@ -179,7 +194,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             do {
-                let raw = try self.transcriber.transcribe(audioURL: audioURL)
+                let raw: String
+                if self.config.effectiveEngine == "gigaam" {
+                    raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
+                } else {
+                    raw = try self.transcriber.transcribe(audioURL: audioURL)
+                }
                 let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
@@ -213,7 +233,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             do {
-                let raw = try self.transcriber.transcribe(audioURL: audioURL)
+                let raw: String
+                if self.config.effectiveEngine == "gigaam" {
+                    raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
+                } else {
+                    raw = try self.transcriber.transcribe(audioURL: audioURL)
+                }
                 let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
                 DispatchQueue.main.async {
                     if !text.isEmpty {

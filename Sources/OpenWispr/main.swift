@@ -26,7 +26,11 @@ func printUsage() {
         open-wispr set-hotkey f5                 F5 key
         open-wispr set-hotkey ctrl+space         Ctrl + Space
 
-    AVAILABLE MODELS:
+    ENGINES:
+        whisper    Use whisper-cpp (default)
+        gigaam     Use GigaAM v3 via MLX (Russian, fast on Apple Silicon)
+
+    AVAILABLE MODELS (whisper):
         tiny.en, tiny, base.en, base, small.en, small, medium.en, medium, large
     """)
 }
@@ -104,6 +108,36 @@ func cmdDownloadModel(_ size: String) {
     }
 }
 
+func cmdSetEngine(_ engine: String) {
+    let valid = ["whisper", "gigaam"]
+    guard valid.contains(engine) else {
+        print("Error: Unknown engine '\(engine)'")
+        print("Available: \(valid.joined(separator: ", "))")
+        exit(1)
+    }
+
+    var config = Config.load()
+    config.engine = engine
+    if engine == "gigaam" {
+        config.language = "ru"
+    }
+
+    do {
+        try config.save()
+        print("Engine set to: \(engine)")
+        if engine == "gigaam" {
+            if GigaAMTranscriber.isAvailable(path: config.gigaamPath) {
+                print("GigaAM: ready")
+            } else {
+                print("GigaAM: gigaam-transcribe not found. Set 'gigaamPath' in config.json")
+            }
+        }
+    } catch {
+        print("Error saving config: \(error.localizedDescription)")
+        exit(1)
+    }
+}
+
 func cmdStatus() {
     let config = Config.load()
     let hotkeyDesc = KeyCodes.describe(keyCode: config.hotkey.keyCode, modifiers: config.hotkey.modifiers)
@@ -111,13 +145,28 @@ func cmdStatus() {
     print("open-wispr v\(version)")
     print("Config:      \(Config.configFile.path)")
     print("Hotkey:      \(hotkeyDesc)")
-    print("Model:       \(config.modelSize)")
-    print("Model ready: \(Transcriber.modelExists(modelSize: config.modelSize) ? "yes" : "no")")
-    print("whisper-cpp: \(Transcriber.findWhisperBinary() != nil ? "yes" : "no")")
+    print("Engine:      \(config.effectiveEngine)")
+    if config.effectiveEngine == "gigaam" {
+        let gigaamReady = GigaAMTranscriber.isAvailable(path: config.gigaamPath)
+        print("GigaAM:      \(gigaamReady ? "ready" : "not found")")
+        if let path = config.gigaamPath {
+            print("GigaAM path: \(path)")
+        }
+    } else {
+        print("Model:       \(config.modelSize)")
+        print("Model ready: \(Transcriber.modelExists(modelSize: config.modelSize) ? "yes" : "no")")
+        print("whisper-cpp: \(Transcriber.findWhisperBinary() != nil ? "yes" : "no")")
+    }
 }
 
 let args = CommandLine.arguments
-let command = args.count > 1 ? args[1] : nil
+
+// Filter out macOS launch services arguments (e.g. -NSDocumentRevisionsDebugMode, -psn_...)
+let userArgs = args.dropFirst().filter { !$0.hasPrefix("-NS") && !$0.hasPrefix("-Apple") && !$0.hasPrefix("-psn") }
+let command = userArgs.first
+
+// When launched as .app bundle (no arguments), auto-start
+let isAppBundle = Bundle.main.bundlePath.hasSuffix(".app")
 
 switch command {
 case "start":
@@ -134,6 +183,12 @@ case "set-model":
         exit(1)
     }
     cmdSetModel(args[2])
+case "set-engine":
+    guard args.count > 2 else {
+        print("Usage: open-wispr set-engine <whisper|gigaam>")
+        exit(1)
+    }
+    cmdSetEngine(args[2])
 case "get-hotkey":
     cmdGetHotkey()
 case "download-model":
@@ -144,7 +199,11 @@ case "status":
 case "--help", "-h", "help":
     printUsage()
 case nil:
-    printUsage()
+    if isAppBundle {
+        cmdStart()
+    } else {
+        printUsage()
+    }
 default:
     print("Unknown command: \(command!)")
     printUsage()

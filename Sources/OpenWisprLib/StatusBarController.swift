@@ -108,7 +108,8 @@ class StatusBarController: NSObject {
         hotkeyItem.isEnabled = false
         menu.addItem(hotkeyItem)
 
-        let modelItem = NSMenuItem(title: "Model: \(config.modelSize)", action: nil, keyEquivalent: "")
+        let engineLabel = config.effectiveEngine == "gigaam" ? "GigaAM v3" : "Whisper \(config.modelSize)"
+        let modelItem = NSMenuItem(title: "Engine: \(engineLabel)", action: nil, keyEquivalent: "")
         modelItem.isEnabled = false
         menu.addItem(modelItem)
 
