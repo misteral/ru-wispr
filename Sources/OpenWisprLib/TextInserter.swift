@@ -42,9 +42,8 @@ class TextInserter {
     }
 
     private func simulatePaste() {
-        guard let vKey = currentKeyCodeForCharacter("v") else {
-            return
-        }
+        // Key code 9 = "V" key on Mac, constant regardless of keyboard layout
+        let vKey: CGKeyCode = 9
 
         guard let source = CGEventSource(stateID: .hidSystemState),
             let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true),
@@ -59,49 +58,5 @@ class TextInserter {
         keyUp.post(tap: .cghidEventTap)
     }
 
-    private func currentKeyCodeForCharacter(_ target: Character) -> CGKeyCode? {
-        guard let inputSource = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
-            let rawLayoutData = TISGetInputSourceProperty(inputSource, kTISPropertyUnicodeKeyLayoutData) else {
-            return nil
-        }
 
-        let layoutData = unsafeBitCast(rawLayoutData, to: CFData.self)
-        guard let layoutBytes = CFDataGetBytePtr(layoutData) else {
-            return nil
-        }
-
-        let keyboardLayout = UnsafePointer<UCKeyboardLayout>(OpaquePointer(layoutBytes))
-        let keyboardType = UInt32(LMGetKbdType())
-        let wanted = String(target).lowercased()
-
-        for keyCode in 0..<128 {
-            for modifierState: UInt32 in [0, UInt32(shiftKey >> 8)] {
-                var deadKeyState: UInt32 = 0
-                var chars = [UniChar](repeating: 0, count: 4)
-                var actualLength: Int = 0
-
-                let status = UCKeyTranslate(
-                    keyboardLayout,
-                    UInt16(keyCode),
-                    UInt16(kUCKeyActionDisplay),
-                    modifierState,
-                    keyboardType,
-                    OptionBits(kUCKeyTranslateNoDeadKeysBit),
-                    &deadKeyState,
-                    chars.count,
-                    &actualLength,
-                    &chars
-                )
-
-                guard status == noErr else { continue }
-
-                let produced = String(utf16CodeUnits: chars, count: actualLength).lowercased()
-                if produced == wanted {
-                    return CGKeyCode(keyCode)
-                }
-            }
-        }
-
-        return nil
-    }
 }

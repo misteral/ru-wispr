@@ -1,4 +1,5 @@
 import AppKit
+import AudioToolbox
 
 public class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBar: StatusBarController!
@@ -104,6 +105,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startListening() {
+        loadSystemSounds()
         hotkeyManager = HotkeyManager(
             keyCode: config.hotkey.keyCode,
             modifiers: config.hotkey.modifierFlags
@@ -155,35 +157,90 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         print("Config reloaded: hotkey=\(hotkeyDesc) model=\(config.modelSize)")
     }
 
+    private var startSoundID: SystemSoundID = 0
+    private var stopSoundID: SystemSoundID = 0
+
+    private func loadSystemSounds() {
+        let bundle = Bundle.main
+        if let url = bundle.url(forResource: "startRecording", withExtension: "mp3", subdirectory: "Audio") {
+            AudioServicesCreateSystemSoundID(url as CFURL, &startSoundID)
+        }
+        if let url = bundle.url(forResource: "stopRecording", withExtension: "mp3", subdirectory: "Audio") {
+            AudioServicesCreateSystemSoundID(url as CFURL, &stopSoundID)
+        }
+        // Fallback to system sounds if bundle resources not found
+        if startSoundID == 0, let url = CFURLCreateWithFileSystemPath(nil,
+            "/System/Library/Sounds/Tink.aiff" as CFString, .cfurlposixPathStyle, false) {
+            AudioServicesCreateSystemSoundID(url, &startSoundID)
+        }
+        if stopSoundID == 0, let url = CFURLCreateWithFileSystemPath(nil,
+            "/System/Library/Sounds/Pop.aiff" as CFString, .cfurlposixPathStyle, false) {
+            AudioServicesCreateSystemSoundID(url, &stopSoundID)
+        }
+    }
+
+    private func playStartSound() {
+        guard config.effectiveSoundFeedback, startSoundID != 0 else { return }
+        AudioServicesPlaySystemSound(startSoundID)
+    }
+
+    private func playStopSound() {
+        guard config.effectiveSoundFeedback, stopSoundID != 0 else { return }
+        AudioServicesPlaySystemSound(stopSoundID)
+    }
+
     private func handleKeyDown() {
+        NSLog("[OW] handleKeyDown called, isReady=%d, isPressed=%d", isReady ? 1 : 0, isPressed ? 1 : 0)
         guard isReady, !isPressed else { return }
         isPressed = true
-        statusBar.state = .recording
-        do {
-            let outputURL: URL
-            if Config.effectiveMaxRecordings(config.maxRecordings) == 0 {
-                outputURL = RecordingStore.tempRecordingURL()
-            } else {
-                outputURL = RecordingStore.newRecordingURL()
+        // Delay recording start by 0.2s to ignore short/accidental presses
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self = self, self.isPressed else {
+                NSLog("[OW] handleKeyDown: released before 0.2s, ignoring")
+                return
             }
-            try recorder.startRecording(to: outputURL)
-        } catch {
-            print("Error: \(error.localizedDescription)")
-            isPressed = false
-            statusBar.state = .idle
+            self.statusBar.state = .recording
+            self.playStartSound()
+            do {
+                let outputURL: URL
+                if Config.effectiveMaxRecordings(self.config.maxRecordings) == 0 {
+                    outputURL = RecordingStore.tempRecordingURL()
+                } else {
+                    outputURL = RecordingStore.newRecordingURL()
+                }
+                NSLog("[OW] Starting recording to: %@", outputURL.path)
+                try self.recorder.startRecording(to: outputURL)
+                NSLog("[OW] Recording started OK")
+            } catch {
+                NSLog("[OW] Recording start error: %@", error.localizedDescription)
+                self.isPressed = false
+                self.statusBar.state = .idle
+            }
         }
     }
 
     private func handleKeyUp() {
+        NSLog("[OW] handleKeyUp called, isPressed=%d", isPressed ? 1 : 0)
         guard isPressed else { return }
         isPressed = false
 
         guard let audioURL = recorder.stopRecording() else {
+            NSLog("[OW] stopRecording returned nil (short press, no recording)")
             statusBar.state = .idle
             return
         }
 
+        NSLog("[OW] Recording stopped, audioURL: %@", audioURL.path)
+        playStopSound()
+
+        // Check file size
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: audioURL.path),
+           let size = attrs[.size] as? UInt64 {
+            NSLog("[OW] Audio file size: %llu bytes", size)
+        }
+
         statusBar.state = .transcribing
+        NSLog("[OW] Starting transcription with engine: %@", config.effectiveEngine)
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -196,23 +253,32 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let raw: String
                 if self.config.effectiveEngine == "gigaam" {
+                    NSLog("[OW] Calling gigaam transcribe...")
                     raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
                 } else {
+                    NSLog("[OW] Calling whisper transcribe...")
                     raw = try self.transcriber.transcribe(audioURL: audioURL)
                 }
+                NSLog("[OW] Raw transcription: '%@'", raw)
                 let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
+                NSLog("[OW] Final text: '%@'", text)
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }
                 DispatchQueue.main.async {
                     if !text.isEmpty {
+                        NSLog("[OW] Inserting text...")
                         self.lastTranscription = text
                         self.inserter.insert(text: text)
+                        NSLog("[OW] Text inserted OK")
+                    } else {
+                        NSLog("[OW] Text is empty, skipping insert")
                     }
                     self.statusBar.state = .idle
                     self.statusBar.buildMenu()
                 }
             } catch {
+                NSLog("[OW] Transcription error: %@", error.localizedDescription)
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }

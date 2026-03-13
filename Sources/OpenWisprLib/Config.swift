@@ -9,6 +9,7 @@ public struct Config: Codable {
     public var maxRecordings: Int?
     public var engine: String?  // "whisper" (default) or "gigaam"
     public var gigaamPath: String?  // path to gigaam-transcribe binary
+    public var soundFeedback: FlexBool?  // play sound on record start/stop (default: true)
 
     public static let defaultMaxRecordings = 0
 
@@ -22,6 +23,10 @@ public struct Config: Codable {
         return engine ?? "whisper"
     }
 
+    public var effectiveSoundFeedback: Bool {
+        return soundFeedback?.value ?? true
+    }
+
     public static let defaultConfig = Config(
         hotkey: HotkeyConfig(keyCode: 63, modifiers: []),
         modelPath: nil,
@@ -30,7 +35,8 @@ public struct Config: Codable {
         spokenPunctuation: FlexBool(false),
         maxRecordings: nil,
         engine: nil,
-        gigaamPath: nil
+        gigaamPath: nil,
+        soundFeedback: FlexBool(true)
     )
 
     public static var configDir: URL {
