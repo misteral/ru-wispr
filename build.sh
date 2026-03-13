@@ -2,6 +2,8 @@
 # Build open-wispr with MLX Metal support and install to /Applications
 set -e
 
+VERSION="0.19.0"
+
 echo "==> Building with xcodebuild (compiles Metal shaders)..."
 xcodebuild -scheme open-wispr -configuration Release -destination "platform=macOS" build -quiet 2>/dev/null
 
@@ -21,6 +23,10 @@ CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 
+# Force remove the app from TCC (Privacy & Security) database to reset permissions
+# (This doesn't always work perfectly without sudo, but helps sometimes)
+tccutil reset All com.human37.open-wispr 2>/dev/null || true
+
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS" "$RESOURCES"
 
@@ -29,8 +35,14 @@ cp "$DERIVED" "$MACOS/open-wispr"
 cp "$METALLIB" "$MACOS/mlx.metallib"
 cp -R "$METALLIB_BUNDLE" "$MACOS/"
 
+# Resources
+cp "Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
+if [ -d "Resources/Audio" ]; then
+    cp -R "Resources/Audio" "$RESOURCES/Audio"
+fi
+
 # Info.plist
-cat > "$CONTENTS/Info.plist" << 'PLIST'
+cat > "$CONTENTS/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -38,28 +50,33 @@ cat > "$CONTENTS/Info.plist" << 'PLIST'
     <key>CFBundleExecutable</key>
     <string>open-wispr</string>
     <key>CFBundleIdentifier</key>
-    <string>com.openwispr.app</string>
+    <string>com.human37.open-wispr</string>
     <key>CFBundleName</key>
     <string>OpenWispr</string>
     <key>CFBundleDisplayName</key>
     <string>OpenWispr</string>
     <key>CFBundleVersion</key>
-    <string>0.19.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.19.0</string>
+    <string>${VERSION}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>OpenWispr needs microphone access for voice dictation.</string>
+    <string>OpenWispr needs microphone access to record speech for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>OpenWispr needs accessibility access to insert transcribed text.</string>
 </dict>
 </plist>
 PLIST
+
+echo "==> Code signing..."
+codesign --force --deep --sign - --identifier com.human37.open-wispr "$APP_DIR"
 
 echo ""
 echo "✅ Installed: /Applications/OpenWispr.app"
