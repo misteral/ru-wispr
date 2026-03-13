@@ -12,6 +12,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var streamingBuffer: [Float] = []
     private var streamingTimer: Timer?
     private var lastStreamingText: String = ""
+    private var streamingInsertedText: String = ""
     var config: Config!
     var isPressed = false
     var isReady = false
@@ -223,9 +224,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 }
 
                 // Set up streaming for GigaAM
-                if self.config.effectiveEngine == "gigaam" {
+                if self.config.effectiveEngine == "gigaam" && self.config.effectiveStreaming {
                     self.streamingBuffer = []
                     self.lastStreamingText = ""
+                    self.streamingInsertedText = ""
                     self.recorder.onAudioSamples = { [weak self] samples in
                         self?.streamingBuffer.append(contentsOf: samples)
                     }
@@ -284,13 +286,28 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 let raw: String
                 if self.config.effectiveEngine == "gigaam" {
                     // For GigaAM, do final transcription from the accumulated buffer
-                    // (more accurate than streaming partials)
                     NSLog("[OW] Calling gigaam final transcribe on %d samples...", self.streamingBuffer.count)
-                    if self.streamingBuffer.count > 4800 {  // at least 0.3s of audio
-                        raw = try self.gigaamTranscriber.transcribe(samples: self.streamingBuffer)
+                    let fullRaw: String
+                    if self.streamingBuffer.count > 4800 {
+                        fullRaw = try self.gigaamTranscriber.transcribe(samples: self.streamingBuffer)
                     } else {
-                        raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
+                        fullRaw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
                     }
+                    
+                    // Subtract what we already inserted during streaming
+                    let textToInsert: String
+                    if self.config.effectiveStreaming && !self.streamingInsertedText.isEmpty {
+                        if fullRaw.lowercased().hasPrefix(self.streamingInsertedText.lowercased()) {
+                            textToInsert = String(fullRaw.dropFirst(self.streamingInsertedText.count))
+                        } else {
+                            // If model significantly changed its mind, just insert with a space
+                            textToInsert = " " + fullRaw
+                        }
+                    } else {
+                        textToInsert = fullRaw
+                    }
+                    
+                    raw = textToInsert
                     self.streamingBuffer = []
                 } else {
                     NSLog("[OW] Calling whisper transcribe...")
@@ -344,15 +361,33 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func performStreamingTranscription() {
         let buffer = streamingBuffer
-        guard buffer.count > 4800 else { return }  // at least 0.3s
+        guard buffer.count > 16000 else { return }  // at least 1.0s
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             do {
                 let result = try self.gigaamTranscriber.transcribeLive(samples: buffer)
-                if !result.cumulativeText.isEmpty && result.cumulativeText != self.lastStreamingText {
-                    self.lastStreamingText = result.cumulativeText
-                    NSLog("[OW] Streaming: %@", result.cumulativeText)
+                let currentText = result.cumulativeText
+                
+                if !currentText.isEmpty && currentText != self.lastStreamingText {
+                    // Calculate what's new
+                    let newPart: String
+                    if currentText.lowercased().hasPrefix(self.streamingInsertedText.lowercased()) {
+                        newPart = String(currentText.dropFirst(self.streamingInsertedText.count))
+                    } else {
+                        // Model corrected itself - we can't easily backspace, 
+                        // so we just append the new version with a space
+                        newPart = " " + currentText
+                    }
+                    
+                    if !newPart.isEmpty {
+                        self.streamingInsertedText += newPart
+                        self.lastStreamingText = currentText
+                        
+                        DispatchQueue.main.async {
+                            self.inserter.insert(text: newPart)
+                        }
+                    }
                 }
             } catch {
                 NSLog("[OW] Streaming transcription error: %@", error.localizedDescription)

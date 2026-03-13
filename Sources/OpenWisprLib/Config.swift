@@ -10,6 +10,7 @@ public struct Config: Codable {
     public var engine: String?  // "whisper" (default) or "gigaam"
     public var gigaamPath: String?  // path to gigaam-v3-ctc-mlx model directory
     public var soundFeedback: FlexBool?  // play sound on record start/stop (default: true)
+    public var streaming: FlexBool?  // real-time transcription (default: true)
 
     public static let defaultMaxRecordings = 0
 
@@ -27,6 +28,10 @@ public struct Config: Codable {
         return soundFeedback?.value ?? true
     }
 
+    public var effectiveStreaming: Bool {
+        return streaming?.value ?? true
+    }
+
     public static let defaultConfig = Config(
         hotkey: HotkeyConfig(keyCode: 63, modifiers: []),
         modelPath: nil,
@@ -36,7 +41,8 @@ public struct Config: Codable {
         maxRecordings: nil,
         engine: nil,
         gigaamPath: nil,
-        soundFeedback: FlexBool(true)
+        soundFeedback: FlexBool(true),
+        streaming: FlexBool(true)
     )
 
     public static var configDir: URL {
