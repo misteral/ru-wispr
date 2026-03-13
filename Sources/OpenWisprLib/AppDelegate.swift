@@ -8,6 +8,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     var transcriber: Transcriber!
     var gigaamTranscriber: GigaAMTranscriber!
     var inserter: TextInserter!
+    // Streaming state for GigaAM live transcription
+    private var streamingBuffer: [Float] = []
+    private var streamingTimer: Timer?
+    private var lastStreamingText: String = ""
     var config: Config!
     var isPressed = false
     var isReady = false
@@ -38,7 +42,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         }
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
-        gigaamTranscriber = GigaAMTranscriber(gigaamPath: config.gigaamPath, modelPath: config.modelPath)
+        gigaamTranscriber = GigaAMTranscriber(modelPath: config.gigaamPath)
 
         DispatchQueue.main.async {
             self.statusBar.reprocessHandler = { [weak self] url in
@@ -49,7 +53,16 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         if config.effectiveEngine == "gigaam" {
             if !GigaAMTranscriber.isAvailable(path: config.gigaamPath) {
-                print("Error: gigaam-transcribe not found. Set 'gigaamPath' in config.")
+                print("Error: GigaAM model not found. Set 'gigaamPath' in config (path to gigaam-v3-ctc-mlx directory).")
+                return
+            }
+            // Pre-load model for fast first transcription and streaming
+            do {
+                print("Loading GigaAM v3 MLX model...")
+                try gigaamTranscriber.loadModel()
+                print("GigaAM: ready")
+            } catch {
+                print("Error loading GigaAM model: \(error.localizedDescription)")
                 return
             }
         } else {
@@ -129,7 +142,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         print("Hotkey: \(hotkeyDesc)")
         print("Engine: \(config.effectiveEngine)")
         if config.effectiveEngine == "gigaam" {
-            print("GigaAM: \(config.gigaamPath ?? GigaAMTranscriber.findGigaAMBinary() ?? "auto")")
+            print("GigaAM: \(config.gigaamPath ?? GigaAMTranscriber.defaultModelDir.path) (native MLX)")
         } else {
             print("Model: \(config.modelSize)")
         }
@@ -140,7 +153,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         config = Config.load()
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
-        gigaamTranscriber = GigaAMTranscriber(gigaamPath: config.gigaamPath, modelPath: config.modelPath)
+        gigaamTranscriber = GigaAMTranscriber(modelPath: config.gigaamPath)
 
         hotkeyManager?.stop()
         hotkeyManager = HotkeyManager(
@@ -208,6 +221,19 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 } else {
                     outputURL = RecordingStore.newRecordingURL()
                 }
+
+                // Set up streaming for GigaAM
+                if self.config.effectiveEngine == "gigaam" {
+                    self.streamingBuffer = []
+                    self.lastStreamingText = ""
+                    self.recorder.onAudioSamples = { [weak self] samples in
+                        self?.streamingBuffer.append(contentsOf: samples)
+                    }
+                    self.startStreamingTranscription()
+                } else {
+                    self.recorder.onAudioSamples = nil
+                }
+
                 NSLog("[OW] Starting recording to: %@", outputURL.path)
                 try self.recorder.startRecording(to: outputURL)
                 NSLog("[OW] Recording started OK")
@@ -223,6 +249,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         NSLog("[OW] handleKeyUp called, isPressed=%d", isPressed ? 1 : 0)
         guard isPressed else { return }
         isPressed = false
+
+        // Stop streaming transcription timer
+        stopStreamingTranscription()
+        recorder.onAudioSamples = nil
 
         guard let audioURL = recorder.stopRecording() else {
             NSLog("[OW] stopRecording returned nil (short press, no recording)")
@@ -253,8 +283,15 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let raw: String
                 if self.config.effectiveEngine == "gigaam" {
-                    NSLog("[OW] Calling gigaam transcribe...")
-                    raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
+                    // For GigaAM, do final transcription from the accumulated buffer
+                    // (more accurate than streaming partials)
+                    NSLog("[OW] Calling gigaam final transcribe on %d samples...", self.streamingBuffer.count)
+                    if self.streamingBuffer.count > 4800 {  // at least 0.3s of audio
+                        raw = try self.gigaamTranscriber.transcribe(samples: self.streamingBuffer)
+                    } else {
+                        raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
+                    }
+                    self.streamingBuffer = []
                 } else {
                     NSLog("[OW] Calling whisper transcribe...")
                     raw = try self.transcriber.transcribe(audioURL: audioURL)
@@ -287,6 +324,38 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     self.statusBar.state = .idle
                     self.statusBar.buildMenu()
                 }
+            }
+        }
+    }
+
+    // MARK: - Streaming Transcription
+
+    private func startStreamingTranscription() {
+        // Transcribe every 2 seconds while recording
+        streamingTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.performStreamingTranscription()
+        }
+    }
+
+    private func stopStreamingTranscription() {
+        streamingTimer?.invalidate()
+        streamingTimer = nil
+    }
+
+    private func performStreamingTranscription() {
+        let buffer = streamingBuffer
+        guard buffer.count > 4800 else { return }  // at least 0.3s
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            do {
+                let result = try self.gigaamTranscriber.transcribeLive(samples: buffer)
+                if !result.cumulativeText.isEmpty && result.cumulativeText != self.lastStreamingText {
+                    self.lastStreamingText = result.cumulativeText
+                    NSLog("[OW] Streaming: %@", result.cumulativeText)
+                }
+            } catch {
+                NSLog("[OW] Streaming transcription error: %@", error.localizedDescription)
             }
         }
     }

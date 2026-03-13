@@ -1,12 +1,20 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 import PackageDescription
 
 let package = Package(
     name: "open-wispr",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)],
+    dependencies: [
+        .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.21.0"),
+    ],
     targets: [
         .target(
             name: "OpenWisprLib",
+            dependencies: [
+                .product(name: "MLX", package: "mlx-swift"),
+                .product(name: "MLXNN", package: "mlx-swift"),
+                .product(name: "MLXFFT", package: "mlx-swift"),
+            ],
             path: "Sources/OpenWisprLib",
             linkerSettings: [
                 .linkedFramework("CoreAudio"),
@@ -24,5 +32,6 @@ let package = Package(
             dependencies: ["OpenWisprLib"],
             path: "Tests/OpenWisprTests"
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

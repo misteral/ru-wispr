@@ -127,9 +127,9 @@ func cmdSetEngine(_ engine: String) {
         print("Engine set to: \(engine)")
         if engine == "gigaam" {
             if GigaAMTranscriber.isAvailable(path: config.gigaamPath) {
-                print("GigaAM: ready")
+                print("GigaAM: model found (native MLX)")
             } else {
-                print("GigaAM: gigaam-transcribe not found. Set 'gigaamPath' in config.json")
+                print("GigaAM: model not found. Set 'gigaamPath' to gigaam-v3-ctc-mlx directory")
             }
         }
     } catch {
@@ -148,10 +148,9 @@ func cmdStatus() {
     print("Engine:      \(config.effectiveEngine)")
     if config.effectiveEngine == "gigaam" {
         let gigaamReady = GigaAMTranscriber.isAvailable(path: config.gigaamPath)
-        print("GigaAM:      \(gigaamReady ? "ready" : "not found")")
-        if let path = config.gigaamPath {
-            print("GigaAM path: \(path)")
-        }
+        print("GigaAM:      \(gigaamReady ? "ready (native MLX)" : "not found")")
+        let modelPath = config.gigaamPath ?? GigaAMTranscriber.defaultModelDir.path
+        print("GigaAM path: \(modelPath)")
     } else {
         print("Model:       \(config.modelSize)")
         print("Model ready: \(Transcriber.modelExists(modelSize: config.modelSize) ? "yes" : "no")")
@@ -196,6 +195,28 @@ case "download-model":
     cmdDownloadModel(size)
 case "status":
     cmdStatus()
+case "test-gigaam":
+    let audioFile = args.count > 2 ? args[2] : nil
+    let config = Config.load()
+    let transcriber = GigaAMTranscriber(modelPath: config.gigaamPath)
+    do {
+        let t0 = CFAbsoluteTimeGetCurrent()
+        try transcriber.loadModel()
+        print("Model loaded in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - t0))s")
+
+        if let file = audioFile {
+            let t1 = CFAbsoluteTimeGetCurrent()
+            let text = try transcriber.transcribe(audioURL: URL(fileURLWithPath: file))
+            print("Transcribed in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - t1))s")
+            print("Result: \(text)")
+        } else {
+            print("GigaAM: ready (native MLX)")
+            print("Usage: open-wispr test-gigaam <audio-file>")
+        }
+    } catch {
+        print("Error: \(error)")
+        exit(1)
+    }
 case "--help", "-h", "help":
     printUsage()
 case nil:

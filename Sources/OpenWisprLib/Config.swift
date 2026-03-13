@@ -8,7 +8,7 @@ public struct Config: Codable {
     public var spokenPunctuation: FlexBool?
     public var maxRecordings: Int?
     public var engine: String?  // "whisper" (default) or "gigaam"
-    public var gigaamPath: String?  // path to gigaam-transcribe binary
+    public var gigaamPath: String?  // path to gigaam-v3-ctc-mlx model directory
     public var soundFeedback: FlexBool?  // play sound on record start/stop (default: true)
 
     public static let defaultMaxRecordings = 0

@@ -7,6 +7,9 @@ class AudioRecorder {
     private var isRecording = false
     private var currentOutputURL: URL?
 
+    /// Callback for streaming: receives new audio samples as they arrive (Float32, 16kHz).
+    var onAudioSamples: (([Float]) -> Void)?
+
     func startRecording(to outputURL: URL) throws {
         guard !isRecording else { return }
 
@@ -53,6 +56,14 @@ class AudioRecorder {
 
             if error == nil && convertedBuffer.frameLength > 0 {
                 try? self.audioFile?.write(from: convertedBuffer)
+
+                // Provide samples for streaming transcription
+                if let callback = self.onAudioSamples,
+                   let channelData = convertedBuffer.floatChannelData?[0] {
+                    let count = Int(convertedBuffer.frameLength)
+                    let samples = Array(UnsafeBufferPointer(start: channelData, count: count))
+                    callback(samples)
+                }
             }
         }
 
