@@ -251,6 +251,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 self.streamingInsertedText = ""
                 self.recorder.onAudioSamples = { [weak self] samples in
                     self?.streamingBuffer.append(contentsOf: samples)
+                    
+                    // Calculate audio level for waveform visualizer
+                    let rms = sqrt(samples.map { $0 * $0 }.reduce(0, +) / Float(max(1, samples.count)))
+                    DispatchQueue.main.async {
+                        self?.overlay.updateAudioLevel(rms)
+                    }
                 }
                 self.startStreamingTranscription()
                 DispatchQueue.main.async {
