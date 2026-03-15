@@ -30,10 +30,11 @@ tccutil reset All com.human37.open-wispr 2>/dev/null || true
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS" "$RESOURCES"
 
-# Binary + Metal library
+# Binary + Metal library (place in both MacOS/ and Resources/ for MLX discovery)
 cp "$DERIVED" "$MACOS/open-wispr"
 cp "$METALLIB" "$MACOS/mlx.metallib"
 cp -R "$METALLIB_BUNDLE" "$MACOS/"
+cp -R "$METALLIB_BUNDLE" "$RESOURCES/"
 
 # Resources
 cp "Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
