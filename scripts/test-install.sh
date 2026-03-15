@@ -86,7 +86,7 @@ else
     fail "App bundle missing Info.plist"
 fi
 
-if grep -q "com.human37.ru-wisper" /tmp/RuWisperTest.app/Contents/Info.plist; then
+if grep -q "co.itbeaver.ru-wisper" /tmp/RuWisperTest.app/Contents/Info.plist; then
     pass "Info.plist has correct bundle ID"
 else
     fail "Info.plist wrong bundle ID"

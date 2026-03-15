@@ -25,7 +25,7 @@ RESOURCES="$CONTENTS/Resources"
 
 # Force remove the app from TCC (Privacy & Security) database to reset permissions
 # (This doesn't always work perfectly without sudo, but helps sometimes)
-tccutil reset All com.human37.ru-wisper 2>/dev/null || true
+tccutil reset All co.itbeaver.ru-wisper 2>/dev/null || true
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS" "$RESOURCES"
@@ -51,7 +51,7 @@ cat > "$CONTENTS/Info.plist" << PLIST
     <key>CFBundleExecutable</key>
     <string>ru-wisper</string>
     <key>CFBundleIdentifier</key>
-    <string>com.human37.ru-wisper</string>
+    <string>co.itbeaver.ru-wisper</string>
     <key>CFBundleName</key>
     <string>RuWisper</string>
     <key>CFBundleDisplayName</key>
@@ -77,7 +77,7 @@ cat > "$CONTENTS/Info.plist" << PLIST
 PLIST
 
 echo "==> Code signing..."
-codesign --force --deep --sign - --identifier com.human37.ru-wisper "$APP_DIR"
+codesign --force --deep --sign - --identifier co.itbeaver.ru-wisper "$APP_DIR"
 
 echo ""
 echo "✅ Installed: /Applications/RuWisper.app"

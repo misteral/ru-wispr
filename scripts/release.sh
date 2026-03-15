@@ -4,7 +4,7 @@ set -euo pipefail
 
 VERSION="1.0.0"
 APP_NAME="RuWisper"
-BUNDLE_ID="com.human37.ru-wisper"
+BUNDLE_ID="co.itbeaver.ru-wisper"
 SIGNING_IDENTITY="Developer ID Application: Aleksandr Bobrov (8HR3ZJZ5MZ)"
 TEAM_ID="8HR3ZJZ5MZ"
 

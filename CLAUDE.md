@@ -66,7 +66,7 @@ CI runs 4 parallel jobs on PRs: build, unit-tests, install-test, transcription-t
 Distributed outside the App Store (notarized DMG). App Sandbox is incompatible with core functionality (global hotkey monitoring, CGEvent paste simulation, Accessibility API).
 
 - **Signing identity:** `Developer ID Application: Aleksandr Bobrov (8HR3ZJZ5MZ)`
-- **Bundle ID:** `com.human37.open-wispr`
+- **Bundle ID:** `co.itbeaver.ru-wisper`
 - **Release script:** `scripts/release.sh` — builds, signs, creates DMG, optionally notarizes
 - **Output:** `dist/OpenWispr-{version}.dmg`
 

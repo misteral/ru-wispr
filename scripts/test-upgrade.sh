@@ -19,8 +19,8 @@ echo "==> Registering app bundle..."
 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -f ~/Applications/RuWisper.app
 
 echo "==> Resetting permissions (simulates install.sh upgrade)..."
-tccutil reset Accessibility com.human37.ru-wisper 2>/dev/null || true
-tccutil reset Microphone com.human37.ru-wisper 2>/dev/null || true
+tccutil reset Accessibility co.itbeaver.ru-wisper 2>/dev/null || true
+tccutil reset Microphone co.itbeaver.ru-wisper 2>/dev/null || true
 
 echo ""
 echo "==> Launching RuWisper..."

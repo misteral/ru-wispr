@@ -137,8 +137,8 @@ if brew list ru-wisper &>/dev/null || [ -d ~/Applications/RuWisper.app ]; then
     brew services stop ru-wisper </dev/null >/dev/null 2>&1 || true
     brew uninstall --force ru-wisper </dev/null >/dev/null 2>&1 || true
     brew untap human37/ru-wisper </dev/null >/dev/null 2>&1 || true
-    tccutil reset Accessibility com.human37.ru-wisper </dev/null >/dev/null 2>&1 || true
-    tccutil reset Microphone com.human37.ru-wisper </dev/null >/dev/null 2>&1 || true
+    tccutil reset Accessibility co.itbeaver.ru-wisper </dev/null >/dev/null 2>&1 || true
+    tccutil reset Microphone co.itbeaver.ru-wisper </dev/null >/dev/null 2>&1 || true
     rm -rf ~/Applications/RuWisper.app
 
     stop_spin

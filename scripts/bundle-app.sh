@@ -27,7 +27,7 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <key>CFBundleExecutable</key>
     <string>ru-wisper</string>
     <key>CFBundleIdentifier</key>
-    <string>com.human37.ru-wisper</string>
+    <string>co.itbeaver.ru-wisper</string>
     <key>CFBundleName</key>
     <string>RuWisper</string>
     <key>CFBundleDisplayName</key>
@@ -50,6 +50,6 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
 </plist>
 PLIST
 
-codesign --force --sign - --identifier com.human37.ru-wisper "$APP_DIR"
+codesign --force --sign - --identifier co.itbeaver.ru-wisper "$APP_DIR"
 
 echo "Built $APP_DIR"

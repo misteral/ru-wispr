@@ -23,7 +23,7 @@ echo "  Removing logs..."
 rm -f /opt/homebrew/var/log/ru-wisper.log
 
 echo "  Resetting permissions..."
-tccutil reset Accessibility com.human37.ru-wisper 2>/dev/null || true
+tccutil reset Accessibility co.itbeaver.ru-wisper 2>/dev/null || true
 
 echo ""
 echo "RuWisper has been completely uninstalled."

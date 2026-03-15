@@ -20,7 +20,7 @@ class RuWisper < Formula
     target.rmtree if target.exist?
     cp_r prefix/"RuWisper.app", target
     system "codesign", "--remove-signature", "#{target}/Contents/MacOS/ru-wisper"
-    system "tccutil", "reset", "Accessibility", "com.human37.ru-wisper"
+    system "tccutil", "reset", "Accessibility", "co.itbeaver.ru-wisper"
   end
 
   service do
