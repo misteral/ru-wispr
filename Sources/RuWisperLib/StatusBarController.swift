@@ -92,12 +92,12 @@ class StatusBarController: NSObject {
 
         let stateText: String
         switch state {
-        case .idle: stateText = "Ready"
-        case .recording: stateText = "Recording..."
-        case .transcribing: stateText = "Transcribing..."
-        case .downloading: stateText = "Downloading model..."
-        case .waitingForPermission: stateText = "Waiting for Accessibility permission..."
-        case .copiedToClipboard: stateText = "Copied to clipboard"
+        case .idle: stateText = L10n.ready
+        case .recording: stateText = L10n.recording
+        case .transcribing: stateText = L10n.transcribing
+        case .downloading: stateText = L10n.downloadingModel
+        case .waitingForPermission: stateText = L10n.waitingForAccessibility
+        case .copiedToClipboard: stateText = L10n.copiedToClipboard
         }
         let stateItem = NSMenuItem(title: stateText, action: nil, keyEquivalent: "")
         stateItem.isEnabled = false
@@ -105,19 +105,19 @@ class StatusBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        let hotkeyItem = NSMenuItem(title: "Hotkey: \(hotkeyDesc)", action: nil, keyEquivalent: "")
+        let hotkeyItem = NSMenuItem(title: L10n.hotkey(hotkeyDesc), action: nil, keyEquivalent: "")
         hotkeyItem.isEnabled = false
         menu.addItem(hotkeyItem)
 
         let engineLabel = config.effectiveEngine == "gigaam" ? "GigaAM v3" : "Whisper \(config.modelSize)"
-        let modelItem = NSMenuItem(title: "Engine: \(engineLabel)", action: nil, keyEquivalent: "")
+        let modelItem = NSMenuItem(title: L10n.engine(engineLabel), action: nil, keyEquivalent: "")
         modelItem.isEnabled = false
         menu.addItem(modelItem)
 
         menu.addItem(NSMenuItem.separator())
 
         let lastText = (NSApplication.shared.delegate as? AppDelegate)?.lastTranscription
-        let copyTitle = copiedFeedback ? "Copied!" : "Copy Last Dictation"
+        let copyTitle = copiedFeedback ? L10n.copied : L10n.copyLastDictation
         let copyItem = NSMenuItem(title: copyTitle, action: lastText != nil && !copiedFeedback ? #selector(copyLastTranscription) : nil, keyEquivalent: "")
         copyItem.target = self
         if lastText == nil || copiedFeedback { copyItem.isEnabled = copiedFeedback }
@@ -125,11 +125,11 @@ class StatusBarController: NSObject {
 
         if Config.effectiveMaxRecordings(config.maxRecordings) > 0 {
             let recordings = RecordingStore.listRecordings()
-            let reprocessItem = NSMenuItem(title: "Recent Recordings", action: nil, keyEquivalent: "")
+            let reprocessItem = NSMenuItem(title: L10n.recentRecordings, action: nil, keyEquivalent: "")
             let submenu = NSMenu()
 
             if recordings.isEmpty {
-                let emptyItem = NSMenuItem(title: "No recordings", action: nil, keyEquivalent: "")
+                let emptyItem = NSMenuItem(title: L10n.noRecordings, action: nil, keyEquivalent: "")
                 emptyItem.isEnabled = false
                 submenu.addItem(emptyItem)
             } else {
@@ -152,16 +152,16 @@ class StatusBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        let reloadItem = NSMenuItem(title: "Reload Configuration", action: #selector(reloadConfiguration), keyEquivalent: "r")
+        let reloadItem = NSMenuItem(title: L10n.reloadConfiguration, action: #selector(reloadConfiguration), keyEquivalent: "r")
         reloadItem.target = self
         menu.addItem(reloadItem)
 
-        let openItem = NSMenuItem(title: "Open Configuration", action: #selector(openConfiguration), keyEquivalent: "o")
+        let openItem = NSMenuItem(title: L10n.openConfiguration, action: #selector(openConfiguration), keyEquivalent: "o")
         openItem.target = self
         menu.addItem(openItem)
 
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: L10n.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         statusItem.menu = menu
     }

@@ -44,6 +44,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupInner() async throws {
         config = Config.load()
+        L10n.language = config.language
         if Config.effectiveMaxRecordings(config.maxRecordings) == 0 {
             RecordingStore.deleteAllRecordings()
         }
@@ -110,7 +111,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         if config.effectiveEngine == "whisper" && !Transcriber.modelExists(modelSize: config.modelSize) {
             await MainActor.run {
                 self.statusBar.state = .downloading
-                self.statusBar.updateDownloadProgress("Downloading \(self.config.modelSize) model...")
+                self.statusBar.updateDownloadProgress(L10n.downloadingModelNamed(self.config.modelSize))
             }
             print("Downloading \(config.modelSize) model...")
             try ModelDownloader.download(modelSize: config.modelSize)
@@ -158,6 +159,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     public func reloadConfig() {
         config = Config.load()
+        L10n.language = config.language
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
         gigaamTranscriber = GigaAMTranscriber(modelPath: config.gigaamPath)

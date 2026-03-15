@@ -57,7 +57,7 @@ struct StreamingOverlayContent: View {
         .animation(.easeInOut(duration: 0.4), value: state.isLocked)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Recording: \(state.text)")
+        .accessibilityLabel(L10n.recordingAccessibility(state.text))
     }
 }
 
