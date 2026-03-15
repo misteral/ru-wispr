@@ -17,6 +17,9 @@ final class StreamingOverlayState {
     var audioLevel: Float = 0
     var isLocked = false
     fileprivate var smoothedLevel: Float = 0
+
+    static let waveformBarCount = 64
+    var levelHistory: [Float] = Array(repeating: 0, count: StreamingOverlayState.waveformBarCount)
 }
 
 struct StreamingOverlayContent: View {
@@ -28,7 +31,7 @@ struct StreamingOverlayContent: View {
                 .frame(width: 44, height: 44)
                 .padding(.leading, 12)
 
-            WaveformCanvas(level: state.audioLevel)
+            WaveformCanvas(levels: state.levelHistory)
                 .frame(width: 120, height: 24)
                 .padding(.leading, 10)
 
@@ -110,43 +113,62 @@ struct RecordingIndicator: View {
 }
 
 struct WaveformCanvas: View {
-    var level: Float
+    var levels: [Float]
 
-    private let barCount = 30
-    private let barWidth: Double = 1.5
-    private let spacing: Double = 2.5
-
-    // Pre-computed organic pattern — mimics real speech waveform shape
-    private static let waveformPattern: [Double] = [
-        0.10, 0.14, 0.12, 0.18, 0.22, 0.15, 0.30, 0.55, 0.70, 0.50,
-        0.85, 1.00, 0.75, 0.90, 0.60, 0.80, 0.95, 0.70, 0.55, 0.65,
-        0.45, 0.35, 0.50, 0.30, 0.20, 0.25, 0.15, 0.12, 0.10, 0.08,
-    ]
+    private let barWidth: Double = 1.0
+    private let spacing: Double = 0.8
 
     var body: some View {
         Canvas { context, size in
+            let barCount = levels.count
+            guard barCount > 0 else { return }
+
             let totalWidth = Double(barCount) * barWidth + Double(barCount - 1) * spacing
             let startX = (size.width - totalWidth) / 2
             let centerY = size.height / 2
-
-            let normalized = min(1.0, Double(level) / 0.12)
-            let scaled = pow(normalized, 0.4)
+            let maxHalf = size.height / 2
 
             for i in 0..<barCount {
-                let pattern = Self.waveformPattern[i]
-                let variation = 0.85 + Double((i * 7 + 3) % 11) / 11.0 * 0.30
-                let targetHeight = max(2.0, scaled * size.height * 0.9 * pattern * variation)
-                let barHeight = min(targetHeight, size.height)
+                let raw = Double(levels[i])
+                let normalized = min(1.0, raw / 0.12)
+                let scaled = pow(normalized, 0.45)
+
+                let jitter = 0.88 + Double((i * 13 + 5) % 17) / 17.0 * 0.24
+                let halfH = max(1.0, scaled * maxHalf * 0.92 * jitter)
 
                 let x = startX + Double(i) * (barWidth + spacing)
-                let y = centerY - barHeight / 2
-                let opacity = 0.35 + (barHeight / size.height) * 0.50
-                let rect = CGRect(x: x, y: y, width: barWidth, height: barHeight)
+
+                let rect = CGRect(x: x, y: centerY - halfH, width: barWidth, height: halfH * 2)
                 let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
+
+                let opacity = 0.30 + (halfH / maxHalf) * 0.55
                 context.fill(path, with: .color(.white.opacity(opacity)))
             }
         }
     }
+}
+
+/// Generate a realistic speech-like audio level history for preview
+func makeSpeechHistory() -> [Float] {
+    // Simulates: silence → start talking → pause → talk again → trailing off
+    let pattern: [Float] = [
+        // silence at start
+        0.002, 0.003, 0.002, 0.004, 0.003, 0.005, 0.004, 0.003,
+        // speech begins, ramp up
+        0.008, 0.015, 0.025, 0.040, 0.055, 0.070, 0.085, 0.095,
+        // active speech — first word cluster
+        0.10, 0.11, 0.09, 0.12, 0.10, 0.08, 0.11, 0.09,
+        // brief pause between words
+        0.04, 0.02, 0.015, 0.01,
+        // second word cluster — louder
+        0.03, 0.06, 0.09, 0.11, 0.13, 0.11, 0.10, 0.12,
+        0.09, 0.07, 0.10, 0.08,
+        // trailing off
+        0.06, 0.04, 0.03, 0.02, 0.015, 0.01, 0.008, 0.005,
+        // still recording, quiet
+        0.004, 0.003, 0.004, 0.003, 0.002, 0.003, 0.002, 0.002,
+    ]
+    return pattern
 }
 
 // ─────────────────────────────────────────────
@@ -267,53 +289,46 @@ app.setActivationPolicy(.accessory) // headless, no dock icon
 
 let size = CGSize(width: 640, height: 200)
 
-// --- State 1: Idle (silence, no text) ---
+// --- State 1: Just started recording (silence) ---
 let idleState = StreamingOverlayState()
-idleState.audioLevel = 0.005
+idleState.audioLevel = 0.003
+idleState.levelHistory = Array(repeating: Float(0.003), count: 64)
 idleState.text = ""
-if let img = renderView(PreviewScene(state: idleState, label: "state: idle (silence)"), size: size) {
+if let img = renderView(PreviewScene(state: idleState, label: "state: just started (silence)"), size: size) {
     saveImage(img, to: "\(outputDir)/overlay-idle.png")
 }
 
-// --- State 2: Quiet speech ---
-let quietState = StreamingOverlayState()
-quietState.audioLevel = 0.03
-quietState.text = "Тихая речь..."
-if let img = renderView(PreviewScene(state: quietState, label: "state: quiet speech (0.03)"), size: size) {
-    saveImage(img, to: "\(outputDir)/overlay-quiet.png")
-}
-
-// --- State 3: Normal speech ---
+// --- State 2: Mid-recording with speech history ---
 let recordingState = StreamingOverlayState()
-recordingState.audioLevel = 0.06
+recordingState.audioLevel = 0.08
+recordingState.levelHistory = makeSpeechHistory()
 recordingState.text = "Привет, это тестовый текст для превью оверлея"
-if let img = renderView(PreviewScene(state: recordingState, label: "state: normal speech (0.06)"), size: size) {
+if let img = renderView(PreviewScene(state: recordingState, label: "state: recording (speech history)"), size: size) {
     saveImage(img, to: "\(outputDir)/overlay-recording.png")
 }
 
-// --- State 4: Loud speech ---
+// --- State 3: Active loud speech (right side is loud) ---
 let loudState = StreamingOverlayState()
 loudState.audioLevel = 0.12
+var loudHistory: [Float] = Array(repeating: Float(0.003), count: 30)
+loudHistory += [0.01, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.11, 0.13, 0.12,
+                0.11, 0.10, 0.12, 0.13, 0.11, 0.10, 0.12, 0.11, 0.13, 0.12,
+                0.10, 0.11, 0.12, 0.13, 0.11, 0.12, 0.10, 0.11, 0.13, 0.12,
+                0.11, 0.12, 0.13, 0.12]
+loudState.levelHistory = loudHistory
 loudState.text = "Громкая речь, пульсация на максимуме!"
-if let img = renderView(PreviewScene(state: loudState, label: "state: loud speech (0.12)"), size: size) {
+if let img = renderView(PreviewScene(state: loudState, label: "state: loud speech (building up)"), size: size) {
     saveImage(img, to: "\(outputDir)/overlay-loud.png")
 }
 
-// --- State 5: Locked mode ---
+// --- State 4: Locked mode ---
 let lockedState = StreamingOverlayState()
 lockedState.audioLevel = 0.05
+lockedState.levelHistory = makeSpeechHistory()
 lockedState.text = "Заблокированный режим записи"
 lockedState.isLocked = true
 if let img = renderView(PreviewScene(state: lockedState, label: "state: locked"), size: size) {
     saveImage(img, to: "\(outputDir)/overlay-locked.png")
-}
-
-// --- State 6: Long text ---
-let longState = StreamingOverlayState()
-longState.audioLevel = 0.06
-longState.text = "Очень длинный текст который должен обрезаться с помощью truncation mode потому что не помещается в оверлей полностью и нужно проверить как это выглядит"
-if let img = renderView(PreviewScene(state: longState, label: "state: long text"), size: size) {
-    saveImage(img, to: "\(outputDir)/overlay-longtext.png")
 }
 
 print("\n📸 All overlay previews rendered to: \(outputDir)/")
