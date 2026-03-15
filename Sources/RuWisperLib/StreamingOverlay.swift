@@ -18,45 +18,49 @@ struct StreamingOverlayContent: View {
     var body: some View {
         HStack(spacing: 0) {
             RecordingIndicator()
-                .frame(width: 52, height: 52)
-                .padding(.leading, 14)
+                .frame(width: 60, height: 60)
+                .padding(.leading, 12)
 
             WaveformCanvas(level: state.audioLevel)
-                .frame(width: 96, height: 28)
-                .padding(.leading, 16)
+                .frame(width: 130, height: 32)
+                .padding(.leading, 10)
 
             Text(state.text)
-                .font(.system(size: 15, weight: .light))
-                .foregroundStyle(.white.opacity(0.85))
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(.white.opacity(0.88))
                 .lineLimit(2)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 22)
-                .padding(.trailing, 28)
+                .padding(.leading, 18)
+                .padding(.trailing, 24)
         }
-        .frame(width: 540, height: 72)
+        .frame(width: 560, height: 76)
         .background {
             ZStack {
-                // Frosted glass — light translucent surface
-                RoundedRectangle(cornerRadius: 36)
+                // Dark base layer for glassmorphism depth
+                RoundedRectangle(cornerRadius: 38)
+                    .fill(Color.black.opacity(0.3))
+
+                // Frosted glass material
+                RoundedRectangle(cornerRadius: 38)
                     .fill(.ultraThinMaterial)
 
-                // Subtle top-lit edge highlight for glass depth
-                RoundedRectangle(cornerRadius: 36)
+                // Top-lit edge highlight for glass depth
+                RoundedRectangle(cornerRadius: 38)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                .white.opacity(state.isLocked ? 0.18 : 0.1),
-                                .white.opacity(0.03),
+                                .white.opacity(state.isLocked ? 0.22 : 0.14),
+                                .white.opacity(0.04),
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         ),
-                        lineWidth: 0.33
+                        lineWidth: 0.5
                     )
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 36))
+        .clipShape(.rect(cornerRadius: 38))
         .animation(.easeInOut(duration: 0.4), value: state.isLocked)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .combine)
@@ -76,27 +80,27 @@ struct RecordingIndicator: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [.red.opacity(0.15), .clear],
+                        colors: [.red.opacity(0.22), .clear],
                         center: .center,
-                        startRadius: 6,
-                        endRadius: 26
+                        startRadius: 8,
+                        endRadius: 30
                     )
                 )
-                .frame(width: 52, height: 52)
-                .opacity(reduceMotion ? 0.5 : (isPulsing ? 0.7 : 0.25))
+                .frame(width: 60, height: 60)
+                .opacity(reduceMotion ? 0.6 : (isPulsing ? 0.85 : 0.35))
 
-            // Mid glow ring
+            // Mid halo ring
             Circle()
-                .fill(.red.opacity(0.1))
-                .frame(width: 30, height: 30)
-                .opacity(reduceMotion ? 0.35 : (isPulsing ? 0.5 : 0.15))
+                .fill(.red.opacity(0.12))
+                .frame(width: 38, height: 38)
+                .opacity(reduceMotion ? 0.4 : (isPulsing ? 0.6 : 0.2))
 
-            // Core dot with soft radiance
+            // Core recording dot
             Circle()
                 .fill(.red)
-                .frame(width: 12, height: 12)
-                .shadow(color: .red.opacity(0.45), radius: 14)
-                .opacity(reduceMotion ? 1.0 : (isPulsing ? 1.0 : 0.82))
+                .frame(width: 16, height: 16)
+                .shadow(color: .red.opacity(0.5), radius: 16)
+                .opacity(reduceMotion ? 1.0 : (isPulsing ? 1.0 : 0.85))
         }
         .onAppear {
             guard !reduceMotion else { return }
@@ -112,8 +116,8 @@ struct RecordingIndicator: View {
 struct WaveformCanvas: View {
     var level: Float
 
-    private let barCount = 20
-    private let barWidth: Double = 1.0
+    private let barCount = 30
+    private let barWidth: Double = 1.5
     private let spacing: Double = 2.5
 
     var body: some View {
@@ -123,23 +127,23 @@ struct WaveformCanvas: View {
             let centerY = size.height / 2
 
             let normalized = min(1.0, Double(level) / 0.12)
-            let scaled = pow(normalized, 0.45)
+            let scaled = pow(normalized, 0.4)
             let centerIndex = Double(barCount - 1) / 2.0
 
             for i in 0..<barCount {
                 // Bell curve envelope: center bars taller, edges taper
                 let distance = abs(Double(i) - centerIndex) / centerIndex
-                let envelope = 1.0 - pow(distance, 1.4) * 0.85
+                let envelope = 1.0 - pow(distance, 1.3) * 0.8
 
                 // Organic per-bar variation
-                let variation = Double.random(in: 0.9...1.1)
-                let targetHeight = max(1.5, scaled * size.height * 0.75 * envelope * variation)
+                let variation = Double.random(in: 0.85...1.15)
+                let targetHeight = max(2.0, scaled * size.height * 0.85 * envelope * variation)
                 let barHeight = min(targetHeight, size.height)
 
                 let x = startX + Double(i) * (barWidth + spacing)
                 let y = centerY - barHeight / 2
 
-                let opacity = 0.2 + (barHeight / size.height) * 0.35
+                let opacity = 0.3 + (barHeight / size.height) * 0.45
                 let rect = CGRect(x: x, y: y, width: barWidth, height: barHeight)
                 let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
 
@@ -153,12 +157,12 @@ struct WaveformCanvas: View {
 
 class StreamingOverlay: NSPanel {
     private let state = StreamingOverlayState()
-    private let pillWidth: Double = 540
-    private let pillHeight: Double = 72
+    private let pillWidth: Double = 560
+    private let pillHeight: Double = 76
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 72),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 76),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
