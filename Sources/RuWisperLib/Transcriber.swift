@@ -10,7 +10,7 @@ public class Transcriber {
         self.language = language
     }
 
-    public func transcribe(audioURL: URL) throws -> String {
+    public func transcribe(audioURL: URL) async throws -> String {
         guard let whisperPath = Transcriber.findWhisperBinary() else {
             throw TranscriberError.whisperNotFound
         }
@@ -20,7 +20,7 @@ public class Transcriber {
         }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: whisperPath)
+        process.executableURL = URL(filePath: whisperPath)
         var args = [
             "-m", modelPath,
             "-f", audioURL.path,
@@ -40,20 +40,16 @@ public class Transcriber {
 
         try process.run()
 
-        var stderrData = Data()
-        let stderrThread = Thread {
-            stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        }
-        stderrThread.start()
+        async let stdoutData = stdoutPipe.fileHandleForReading.readToEnd()
+        async let stderrData = stderrPipe.fileHandleForReading.readToEnd()
+        let (data, errorData) = try await (stdoutData, stderrData)
 
-        let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        while !stderrThread.isFinished { Thread.sleep(forTimeInterval: 0.01) }
         process.waitUntilExit()
 
-        let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let output = data.flatMap { String(data: $0, encoding: .utf8) }?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         if process.terminationStatus != 0 {
-            let stderr = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let stderr = errorData.flatMap { String(data: $0, encoding: .utf8) }?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if !stderr.isEmpty { fputs("whisper-cpp: \(stderr)\n", Foundation.stderr) }
             throw TranscriberError.transcriptionFailed
         }
@@ -77,7 +73,7 @@ public class Transcriber {
 
         for name in ["whisper-cli", "whisper-cpp"] {
             let which = Process()
-            which.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+            which.executableURL = URL(filePath: "/usr/bin/which")
             which.arguments = [name]
             let pipe = Pipe()
             which.standardOutput = pipe

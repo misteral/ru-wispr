@@ -2,6 +2,7 @@ import SwiftUI
 
 // MARK: - Observable State
 
+@MainActor
 @Observable
 final class StreamingOverlayState {
     var text = ""
@@ -25,7 +26,7 @@ struct StreamingOverlayContent: View {
                 .padding(.leading, 10)
 
             Text(state.text)
-                .font(.system(size: 16, weight: .light))
+                .font(.body.weight(.light))
                 .foregroundStyle(Color(white: 0.72))
                 .lineLimit(1)
                 .truncationMode(.head)

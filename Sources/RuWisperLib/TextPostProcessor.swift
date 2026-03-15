@@ -27,12 +27,8 @@ public struct TextPostProcessor {
     public static func process(_ text: String) -> String {
         var result = text
         for (pattern, replacement) in replacements {
-            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { continue }
-            result = regex.stringByReplacingMatches(
-                in: result,
-                range: NSRange(result.startIndex..., in: result),
-                withTemplate: replacement
-            )
+            guard let regex = try? Regex(pattern).ignoresCase() else { continue }
+            result = result.replacing(regex, with: replacement)
         }
         result = fixSpacingAroundPunctuation(result)
         result = ensureSpaceAfterPunctuation(result)
@@ -40,24 +36,14 @@ public struct TextPostProcessor {
     }
 
     private static func fixSpacingAroundPunctuation(_ text: String) -> String {
-        var result = text
-        guard let regex = try? NSRegularExpression(pattern: "\\s+([.,?!:;])", options: []) else { return result }
-        result = regex.stringByReplacingMatches(
-            in: result,
-            range: NSRange(result.startIndex..., in: result),
-            withTemplate: "$1"
-        )
-        return result
+        text.replacing(#/\s+([.,?!:;])/#) { match in
+            String(match.1)
+        }
     }
 
     private static func ensureSpaceAfterPunctuation(_ text: String) -> String {
-        var result = text
-        guard let regex = try? NSRegularExpression(pattern: "([.,?!:;])(\\w)", options: []) else { return result }
-        result = regex.stringByReplacingMatches(
-            in: result,
-            range: NSRange(result.startIndex..., in: result),
-            withTemplate: "$1 $2"
-        )
-        return result
+        text.replacing(#/([.,?!:;])(\w)/#) { match in
+            "\(match.1) \(match.2)"
+        }
     }
 }

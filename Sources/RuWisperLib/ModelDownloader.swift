@@ -5,8 +5,8 @@ public class ModelDownloader {
 
     public static func download(modelSize: String) throws {
         let modelFileName = "ggml-\(modelSize).bin"
-        let modelsDir = Config.configDir.appendingPathComponent("models")
-        let destPath = modelsDir.appendingPathComponent(modelFileName)
+        let modelsDir = Config.configDir.appending(path: "models")
+        let destPath = modelsDir.appending(path: modelFileName)
 
         if FileManager.default.fileExists(atPath: destPath.path) {
             print("Model '\(modelSize)' already exists at \(destPath.path)")
@@ -19,7 +19,7 @@ public class ModelDownloader {
         print("Downloading \(modelSize) model from \(url)...")
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
+        process.executableURL = URL(filePath: "/usr/bin/curl")
         process.arguments = ["-L", "--progress-bar", "-o", destPath.path, url]
         process.standardError = FileHandle.standardError
 

@@ -202,12 +202,14 @@ case "test-gigaam":
     do {
         let t0 = CFAbsoluteTimeGetCurrent()
         try transcriber.loadModel()
-        print("Model loaded in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - t0))s")
+        let loadDuration = CFAbsoluteTimeGetCurrent() - t0
+        print("Model loaded in \(loadDuration.formatted(.number.precision(.fractionLength(2))))s")
 
         if let file = audioFile {
             let t1 = CFAbsoluteTimeGetCurrent()
-            let text = try transcriber.transcribe(audioURL: URL(fileURLWithPath: file))
-            print("Transcribed in \(String(format: "%.2f", CFAbsoluteTimeGetCurrent() - t1))s")
+            let text = try transcriber.transcribe(audioURL: URL(filePath: file))
+            let transcribeDuration = CFAbsoluteTimeGetCurrent() - t1
+            print("Transcribed in \(transcribeDuration.formatted(.number.precision(.fractionLength(2))))s")
             print("Result: \(text)")
         } else {
             print("GigaAM: ready (native MLX)")

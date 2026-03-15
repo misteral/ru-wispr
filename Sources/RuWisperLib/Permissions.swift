@@ -28,7 +28,7 @@ struct Permissions {
 
     static func resetAccessibility() {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        process.executableURL = URL(filePath: "/usr/bin/tccutil")
         process.arguments = ["reset", "Accessibility", "co.itbeaver.ru-wisper"]
         try? process.run()
         process.waitUntilExit()

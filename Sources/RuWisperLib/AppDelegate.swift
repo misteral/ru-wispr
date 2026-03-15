@@ -29,20 +29,20 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         inserter = TextInserter()
         overlay = StreamingOverlay()
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.setup()
+        Task {
+            await self.setup()
         }
     }
 
-    private func setup() {
+    private func setup() async {
         do {
-            try setupInner()
+            try await setupInner()
         } catch {
             print("Fatal setup error: \(error.localizedDescription)")
         }
     }
 
-    private func setupInner() throws {
+    private func setupInner() async throws {
         config = Config.load()
         if Config.effectiveMaxRecordings(config.maxRecordings) == 0 {
             RecordingStore.deleteAllRecordings()
@@ -51,7 +51,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
         gigaamTranscriber = GigaAMTranscriber(modelPath: config.gigaamPath)
 
-        DispatchQueue.main.async {
+        await MainActor.run {
             self.statusBar.reprocessHandler = { [weak self] url in
                 self?.reprocess(audioURL: url)
             }
@@ -83,11 +83,11 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         if wasStale {
             print("Accessibility: stale permission detected, resetting...")
             Permissions.resetAccessibility()
-            Thread.sleep(forTimeInterval: 1)
+            try? await Task.sleep(for: .seconds(1))
         }
 
         if !AXIsProcessTrusted() {
-            DispatchQueue.main.async {
+            await MainActor.run {
                 self.statusBar.state = .waitingForPermission
                 self.statusBar.buildMenu()
             }
@@ -100,7 +100,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             Permissions.openAccessibilitySettings()
             print("Waiting for Accessibility permission...")
             while !AXIsProcessTrusted() {
-                Thread.sleep(forTimeInterval: 0.5)
+                try? await Task.sleep(for: .seconds(0.5))
             }
             print("Accessibility: granted")
         } else {
@@ -108,19 +108,19 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if config.effectiveEngine == "whisper" && !Transcriber.modelExists(modelSize: config.modelSize) {
-            DispatchQueue.main.async {
+            await MainActor.run {
                 self.statusBar.state = .downloading
                 self.statusBar.updateDownloadProgress("Downloading \(self.config.modelSize) model...")
             }
             print("Downloading \(config.modelSize) model...")
             try ModelDownloader.download(modelSize: config.modelSize)
-            DispatchQueue.main.async {
+            await MainActor.run {
                 self.statusBar.updateDownloadProgress(nil)
             }
         }
 
-        DispatchQueue.main.async { [weak self] in
-            self?.startListening()
+        await MainActor.run {
+            self.startListening()
         }
     }
 
@@ -224,9 +224,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         lastKeyDownTime = Date()
         
         // Delay recording start by 0.1s to ignore very short jitters
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(0.1))
             guard let self = self, self.isPressed || self.tapCount > 0 else { return }
-            
+
             if self.statusBar.state != .recording {
                 self.startRecordingFlow()
             }
@@ -254,12 +255,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     
                     // Calculate audio level for waveform visualizer
                     let rms = sqrt(samples.map { $0 * $0 }.reduce(0, +) / Float(max(1, samples.count)))
-                    DispatchQueue.main.async {
+                    Task { @MainActor in
                         self?.overlay.updateAudioLevel(rms)
                     }
                 }
                 self.startStreamingTranscription()
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.overlay.show()
                 }
             } else {
@@ -313,7 +314,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         // Stop streaming transcription timer
         stopStreamingTranscription()
         recorder.onAudioSamples = nil
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.overlay.setLocked(false)
             self.overlay.hide()
         }
@@ -336,7 +337,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar.state = .transcribing
         NSLog("[OW] Starting transcription with engine: %@", config.effectiveEngine)
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        Task { [weak self] in
             guard let self = self else { return }
             let maxRecordings = Config.effectiveMaxRecordings(self.config.maxRecordings)
             defer {
@@ -357,7 +358,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     self.streamingBuffer = []
                 } else {
                     NSLog("[OW] Calling whisper transcribe...")
-                    raw = try self.transcriber.transcribe(audioURL: audioURL)
+                    raw = try await self.transcriber.transcribe(audioURL: audioURL)
                 }
                 NSLog("[OW] Raw transcription: '%@'", raw)
                 let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
@@ -365,7 +366,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }
-                DispatchQueue.main.async {
+                await MainActor.run {
                     if !text.isEmpty {
                         NSLog("[OW] Inserting text...")
                         self.lastTranscription = text
@@ -382,7 +383,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }
-                DispatchQueue.main.async {
+                await MainActor.run {
                     print("Error: \(error.localizedDescription)")
                     self.statusBar.state = .idle
                     self.statusBar.buildMenu()
@@ -409,15 +410,17 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         let buffer = streamingBuffer
         guard (isPressed || isLocked), buffer.count > 8000 else { return }  // at least 0.5s and still recording
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        Task { [weak self] in
             guard let self = self else { return }
             do {
                 let result = try self.gigaamTranscriber.transcribeLive(samples: buffer)
                 let currentText = result.cumulativeText
-                
+
                 if !currentText.isEmpty && currentText != self.lastStreamingText {
                     self.lastStreamingText = currentText
-                    self.overlay.updateText(currentText)
+                    await MainActor.run {
+                        self.overlay.updateText(currentText)
+                    }
                 }
             } catch {
                 NSLog("[OW] Streaming transcription error: %@", error.localizedDescription)
@@ -430,33 +433,36 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusBar.state = .transcribing
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        Task { [weak self] in
             guard let self = self else { return }
             do {
                 let raw: String
                 if self.config.effectiveEngine == "gigaam" {
                     raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
                 } else {
-                    raw = try self.transcriber.transcribe(audioURL: audioURL)
+                    raw = try await self.transcriber.transcribe(audioURL: audioURL)
                 }
                 let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
-                DispatchQueue.main.async {
+                await MainActor.run {
                     if !text.isEmpty {
                         self.lastTranscription = text
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(text, forType: .string)
                         self.statusBar.state = .copiedToClipboard
                         self.statusBar.buildMenu()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            self.statusBar.state = .idle
-                            self.statusBar.buildMenu()
-                        }
                     } else {
                         self.statusBar.state = .idle
                     }
                 }
+                if !text.isEmpty {
+                    try? await Task.sleep(for: .seconds(1.5))
+                    await MainActor.run {
+                        self.statusBar.state = .idle
+                        self.statusBar.buildMenu()
+                    }
+                }
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     print("Reprocess error: \(error.localizedDescription)")
                     self.statusBar.state = .idle
                 }

@@ -17,12 +17,12 @@ public class GigaAMTranscriber {
 
     /// Default model directory: ~/.config/ru-wisper/models/gigaam-v3-ctc-mlx
     public static let defaultModelDir: URL = {
-        Config.configDir.appendingPathComponent("models/gigaam-v3-ctc-mlx")
+        Config.configDir.appending(path: "models/gigaam-v3-ctc-mlx")
     }()
 
     public init(modelPath: String? = nil) {
         if let path = modelPath {
-            self.modelDir = URL(fileURLWithPath: path)
+            self.modelDir = URL(filePath: path)
         } else {
             self.modelDir = GigaAMTranscriber.defaultModelDir
         }
@@ -34,7 +34,7 @@ public class GigaAMTranscriber {
         let t0 = CFAbsoluteTimeGetCurrent()
         model = try loadGigaAMModel(from: modelDir)
         let dt = CFAbsoluteTimeGetCurrent() - t0
-        fputs("GigaAM: model loaded in \(String(format: "%.2f", dt))s\n", stderr)
+        fputs("GigaAM: model loaded in \(dt.formatted(.number.precision(.fractionLength(2))))s\n", stderr)
         isLoaded = true
     }
 
@@ -91,13 +91,13 @@ public class GigaAMTranscriber {
     public static func isAvailable(path: String? = nil) -> Bool {
         let dir: URL
         if let path = path {
-            dir = URL(fileURLWithPath: path)
+            dir = URL(filePath: path)
         } else {
             dir = defaultModelDir
         }
 
-        let configFile = dir.appendingPathComponent("config.json")
-        let modelFile = dir.appendingPathComponent("model.safetensors")
+        let configFile = dir.appending(path: "config.json")
+        let modelFile = dir.appending(path: "model.safetensors")
         let fm = FileManager.default
         return fm.fileExists(atPath: configFile.path) && fm.fileExists(atPath: modelFile.path)
     }
@@ -107,7 +107,7 @@ public class GigaAMTranscriber {
     /// Load audio file via ffmpeg → [Float] samples at 16kHz mono.
     private func loadAudioFile(url: URL) throws -> MLXArray {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.executableURL = URL(filePath: "/usr/bin/env")
         process.arguments = [
             "ffmpeg", "-nostdin", "-threads", "0", "-i", url.path,
             "-f", "s16le", "-ac", "1", "-acodec", "pcm_s16le",

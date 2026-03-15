@@ -50,7 +50,8 @@ class StatusBarController: NSObject {
         pasteboard.setString(text, forType: .string)
         copiedFeedback = true
         buildMenu()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
             self?.copiedFeedback = false
             self?.buildMenu()
         }
@@ -319,7 +320,7 @@ class StatusBarController: NSObject {
     }
 
     private func setIcon(_ image: NSImage) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             if let button = self.statusItem.button {
                 button.image = image
                 button.image?.isTemplate = true

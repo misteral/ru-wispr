@@ -8,6 +8,7 @@ import Foundation
 ///   history.push(rawRMS)           // called from audio callback
 ///   history.levels                  // [Float] for WaveformCanvas
 ///   history.currentLevel            // smoothed level for RecordingIndicator
+@MainActor
 @Observable
 final class AudioLevelHistory {
     /// Number of bars in the waveform display
