@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenWispr — Private Voice Dictation for macOS</title>
+<meta name="description" content="Local, private voice dictation for macOS. Hold a key, speak, release — your words appear at the cursor. Everything runs on-device.">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><rect width='120' height='120' rx='26' fill='%23111'/><g transform='translate(60,60)'><rect x='-38' y='-10' width='10' height='20' rx='4' fill='%23fff'/><rect x='-19' y='-20' width='10' height='40' rx='4' fill='%23fff'/><rect x='-5' y='-30' width='10' height='60' rx='4' fill='%23fff'/><rect x='9' y='-20' width='10' height='40' rx='4' fill='%23fff'/><rect x='28' y='-10' width='10' height='20' rx='4' fill='%23fff'/></g></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--surface:#141414;--border:#222;--text:#e5e5e5;--muted:#888;
+  --accent:#fff;--radius:16px;--max:860px;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── hero ── */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+  padding:3rem 1.5rem;position:relative;overflow:hidden;
+}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(255,255,255,.04),transparent);
+  pointer-events:none;
+}
+.logo{width:88px;height:88px;margin-bottom:2rem;animation:float 6s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+h1{font-size:clamp(2.4rem,5vw,3.6rem);font-weight:700;letter-spacing:-.03em;margin-bottom:.75rem}
+.tagline{font-size:clamp(1.05rem,2vw,1.3rem);color:var(--muted);max-width:520px;margin-bottom:2.5rem}
+
+.cta-row{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
+.btn{
+  display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 2rem;
+  border-radius:12px;font-size:1rem;font-weight:600;
+  transition:transform .15s,box-shadow .15s;cursor:pointer;border:none;
+}
+.btn:hover{transform:translateY(-2px);text-decoration:none}
+.btn-primary{background:#fff;color:#000;box-shadow:0 2px 24px rgba(255,255,255,.12)}
+.btn-primary:hover{box-shadow:0 4px 32px rgba(255,255,255,.2)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:#444}
+
+.scroll-hint{
+  position:absolute;bottom:2rem;
+  animation:bounce 2s ease-in-out infinite;color:var(--muted);font-size:.85rem;
+}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+/* ── sections ── */
+section{padding:6rem 1.5rem}
+.container{max-width:var(--max);margin:0 auto}
+.section-title{
+  font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;letter-spacing:-.02em;
+  margin-bottom:.5rem;
+}
+.section-sub{color:var(--muted);margin-bottom:3rem;font-size:1.05rem}
+
+/* ── features grid ── */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:2rem;transition:border-color .2s;
+}
+.card:hover{border-color:#333}
+.card-icon{font-size:1.6rem;margin-bottom:1rem}
+.card h3{font-size:1.1rem;margin-bottom:.5rem}
+.card p{color:var(--muted);font-size:.92rem;line-height:1.5}
+
+/* ── how it works ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;counter-reset:step}
+.step{text-align:center;position:relative}
+.step::before{
+  counter-increment:step;content:counter(step);
+  display:inline-flex;align-items:center;justify-content:center;
+  width:48px;height:48px;border-radius:50%;
+  background:var(--surface);border:1px solid var(--border);
+  font-size:1.2rem;font-weight:700;margin-bottom:1rem;
+}
+.step h3{font-size:1rem;margin-bottom:.4rem}
+.step p{color:var(--muted);font-size:.88rem}
+
+/* ── demo overlay ── */
+.demo-wrap{display:flex;justify-content:center;margin:3rem 0 0}
+.demo-pill{
+  display:flex;align-items:center;gap:0;
+  width:560px;max-width:100%;height:56px;
+  background:rgba(56,56,56,.94);border:1px solid rgba(255,255,255,.18);
+  border-radius:28px;overflow:hidden;padding:0 24px 0 12px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);
+}
+.demo-dot{
+  width:12px;height:12px;border-radius:50%;background:#ff4444;
+  margin-right:14px;animation:pulse 1.5s ease-in-out infinite;flex-shrink:0;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+.demo-wave{display:flex;align-items:center;gap:3px;margin-right:18px;flex-shrink:0}
+.demo-wave span{
+  display:block;width:3px;border-radius:2px;background:rgba(255,255,255,.45);
+  animation:wave 1.2s ease-in-out infinite;
+}
+.demo-wave span:nth-child(1){height:8px;animation-delay:0s}
+.demo-wave span:nth-child(2){height:16px;animation-delay:.1s}
+.demo-wave span:nth-child(3){height:24px;animation-delay:.2s}
+.demo-wave span:nth-child(4){height:16px;animation-delay:.3s}
+.demo-wave span:nth-child(5){height:8px;animation-delay:.4s}
+@keyframes wave{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+.demo-text{
+  color:rgba(255,255,255,.7);font-size:.95rem;font-weight:300;
+  white-space:nowrap;overflow:hidden;
+  border-right:2px solid rgba(255,255,255,.5);
+  animation:typing 4s steps(38) infinite,blink .6s step-end infinite;
+  width:0;max-width:340px;
+}
+@keyframes typing{0%{width:0}40%,60%{width:340px}100%{width:0}}
+@keyframes blink{50%{border-color:transparent}}
+
+/* ── install ── */
+.install-block{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:2rem;position:relative;
+}
+.install-block code{
+  display:block;font-family:"SF Mono",Monaco,Menlo,monospace;
+  font-size:.9rem;color:#ccc;word-break:break-all;line-height:1.8;
+}
+.copy-btn{
+  position:absolute;top:1rem;right:1rem;background:var(--border);
+  border:none;border-radius:8px;padding:.4rem .7rem;color:var(--muted);
+  cursor:pointer;font-size:.8rem;transition:color .15s;
+}
+.copy-btn:hover{color:#fff}
+
+/* ── engines ── */
+.engines{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:600px){.engines{grid-template-columns:1fr}}
+.engine{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:2rem;
+}
+.engine h3{font-size:1.15rem;margin-bottom:.3rem}
+.engine .badge{
+  display:inline-block;font-size:.7rem;padding:.15rem .55rem;border-radius:6px;
+  background:#222;color:var(--muted);margin-bottom:.75rem;
+}
+.engine p{color:var(--muted);font-size:.9rem;line-height:1.5}
+
+/* ── comparison ── */
+.compare-table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:1rem}
+.compare-table th,.compare-table td{
+  text-align:left;padding:.65rem 1rem;border-bottom:1px solid var(--border);
+}
+.compare-table th{color:var(--muted);font-weight:500;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.compare-table td:first-child{font-weight:600}
+.highlight-col{background:rgba(255,255,255,.03)}
+
+/* ── footer ── */
+footer{
+  text-align:center;padding:3rem 1.5rem;color:var(--muted);
+  font-size:.85rem;border-top:1px solid var(--border);
+}
+footer a{color:var(--muted)}
+footer a:hover{color:#fff}
+</style>
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <svg class="logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="120" rx="26" fill="#111"/>
+    <g transform="translate(60,60)">
+      <rect x="-38" y="-10" width="10" height="20" rx="4" fill="#fff"/>
+      <rect x="-19" y="-20" width="10" height="40" rx="4" fill="#fff"/>
+      <rect x="-5" y="-30" width="10" height="60" rx="4" fill="#fff"/>
+      <rect x="9" y="-20" width="10" height="40" rx="4" fill="#fff"/>
+      <rect x="28" y="-10" width="10" height="20" rx="4" fill="#fff"/>
+    </g>
+  </svg>
+
+  <h1>OpenWispr</h1>
+  <p class="tagline">Private voice dictation for macOS.<br>Hold a key, speak, release — text appears at the cursor. Nothing leaves your machine.</p>
+
+  <div class="cta-row">
+    <a href="https://github.com/misteral/open-wispr/releases/latest" class="btn btn-primary">⬇ Download DMG</a>
+    <a href="https://github.com/misteral/open-wispr" class="btn btn-ghost">GitHub</a>
+  </div>
+
+  <div class="demo-wrap">
+    <div class="demo-pill">
+      <div class="demo-dot"></div>
+      <div class="demo-wave">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="demo-text">Всё распознавание идёт прямо на устройстве</div>
+    </div>
+  </div>
+
+  <span class="scroll-hint">↓</span>
+</section>
+
+<!-- ═══ FEATURES ═══ -->
+<section id="features">
+  <div class="container">
+    <h2 class="section-title">Why OpenWispr</h2>
+    <p class="section-sub">Zero cloud, zero latency, zero subscriptions.</p>
+
+    <div class="features">
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>100% On-Device</h3>
+        <p>Audio never leaves your Mac. No servers, no accounts, no tracking. Your voice stays private.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Native Apple Silicon</h3>
+        <p>GigaAM v3 runs via MLX with Metal acceleration. Real-time streaming transcription on M-series chips.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎙️</div>
+        <h3>Push-to-Talk</h3>
+        <p>Hold any key to record, release to transcribe. Double-tap to lock hands-free. Text pastes at the cursor.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌍</div>
+        <h3>Multilingual</h3>
+        <p>Russian-optimized GigaAM engine + Whisper with 99 languages. Switch via a single config field.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📡</div>
+        <h3>Live Streaming</h3>
+        <p>See your words in real-time as you speak. Glassmorphism overlay with waveform visualizer.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🆓</div>
+        <h3>Free &amp; Open Source</h3>
+        <p>MIT license. No subscription, no trial, no in-app purchases. Fork it, modify it, own it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section id="how" style="background:var(--surface)">
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-sub">Three seconds from voice to text.</p>
+
+    <div class="steps">
+      <div class="step">
+        <h3>Hold the Key</h3>
+        <p>Press your hotkey (Globe, Option, or any custom combo). Recording starts instantly.</p>
+      </div>
+      <div class="step">
+        <h3>Speak</h3>
+        <p>Say what you want. The overlay shows live transcription with a waveform.</p>
+      </div>
+      <div class="step">
+        <h3>Release</h3>
+        <p>Let go. Final transcription runs and text is pasted at your cursor position.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ENGINES ═══ -->
+<section id="engines">
+  <div class="container">
+    <h2 class="section-title">Two Engines</h2>
+    <p class="section-sub">Pick the best fit for your language and hardware.</p>
+
+    <div class="engines">
+      <div class="engine">
+        <h3>GigaAM v3</h3>
+        <span class="badge">Default · Native MLX</span>
+        <p>Russian-optimized CTC model running natively via MLX on Apple Silicon. Supports real-time streaming transcription. Fastest option for Russian dictation.</p>
+      </div>
+      <div class="engine">
+        <h3>Whisper</h3>
+        <span class="badge">whisper.cpp · 99 Languages</span>
+        <p>OpenAI's Whisper via whisper.cpp with Metal acceleration. 9 model sizes from tiny (75 MB) to large (3 GB). Best for multilingual use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ INSTALL ═══ -->
+<section id="install" style="background:var(--surface)">
+  <div class="container">
+    <h2 class="section-title">Install</h2>
+    <p class="section-sub">Download the DMG or build from source.</p>
+
+    <div class="install-block">
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').textContent.trim());this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
+      <code>
+<span style="color:#888"># Build from source</span><br>
+git clone https://github.com/misteral/open-wispr.git<br>
+cd open-wispr<br>
+bash build.sh<br>
+<span style="color:#888"># → installs to /Applications/OpenWispr.app</span>
+      </code>
+    </div>
+
+    <p style="color:var(--muted);margin-top:1.5rem;font-size:.92rem">
+      Requires macOS 14+ (Sonoma) on Apple Silicon. Accessibility &amp; Microphone permissions are prompted on first launch.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ COMPARISON ═══ -->
+<section id="compare">
+  <div class="container">
+    <h2 class="section-title">Comparison</h2>
+    <p class="section-sub">How OpenWispr stacks up.</p>
+
+    <div style="overflow-x:auto">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="highlight-col">OpenWispr</th>
+            <th>Wispr Flow</th>
+            <th>Superwhisper</th>
+            <th>Apple Dictation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Price</td><td class="highlight-col"><strong>Free</strong></td><td>$15/mo</td><td>$8.49/mo</td><td>Free</td></tr>
+          <tr><td>Open Source</td><td class="highlight-col"><strong>MIT</strong></td><td>No</td><td>No</td><td>No</td></tr>
+          <tr><td>100% On-Device</td><td class="highlight-col"><strong>Yes</strong></td><td>No</td><td>Yes</td><td>Partial</td></tr>
+          <tr><td>Push-to-Talk</td><td class="highlight-col"><strong>Yes</strong></td><td>Yes</td><td>Yes</td><td>No</td></tr>
+          <tr><td>Streaming</td><td class="highlight-col"><strong>Yes</strong></td><td>Yes</td><td>No</td><td>Yes</td></tr>
+          <tr><td>Account Required</td><td class="highlight-col"><strong>No</strong></td><td>Yes</td><td>Yes</td><td>Apple ID</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <p>
+    <a href="https://github.com/misteral/open-wispr">GitHub</a> ·
+    <a href="https://github.com/misteral/open-wispr/releases">Releases</a> ·
+    MIT License
+  </p>
+  <p style="margin-top:.5rem">Made with 🎙️ on Apple Silicon</p>
+</footer>
+
+</body>
+</html>
