@@ -7,6 +7,7 @@ import SwiftUI
 struct WaveformCanvas: View {
     /// Rolling audio level history from AudioLevelHistory
     var levels: [Float]
+    var offset: Int = 0
 
     private let barWidth: Double = 1.0
     private let spacing: Double = 0.8
@@ -26,8 +27,9 @@ struct WaveformCanvas: View {
                 let normalized = min(1.0, raw / 0.12)
                 let scaled = pow(normalized, 0.45)
 
+                let absoluteIndex = i + offset
                 // Deterministic micro-jitter per bar for organic look
-                let jitter = 0.88 + Double((i * 13 + 5) % 17) / 17.0 * 0.24
+                let jitter = 0.88 + Double((absoluteIndex * 13 + 5) % 17) / 17.0 * 0.24
                 let halfH = max(1.0, scaled * maxHalf * 0.92 * jitter)
 
                 let x = startX + Double(i) * (barWidth + spacing)

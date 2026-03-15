@@ -19,6 +19,9 @@ final class AudioLevelHistory {
     /// Rolling history: left = oldest, right = newest
     private(set) var levels: [Float]
 
+    /// Absolute index of the first element in the levels array, used to maintain stable visual jitter
+    private(set) var offset: Int = 0
+
     private var smoothed: Float = 0
 
     /// Smoothing factor: 0 = no smoothing (raw), 1 = frozen. Default 0.35 feels responsive.
@@ -36,7 +39,9 @@ final class AudioLevelHistory {
 
         levels.append(smoothed)
         if levels.count > capacity {
-            levels.removeFirst(levels.count - capacity)
+            let removed = levels.count - capacity
+            levels.removeFirst(removed)
+            offset += removed
         }
     }
 
@@ -44,6 +49,7 @@ final class AudioLevelHistory {
     func reset() {
         smoothed = 0
         currentLevel = 0
+        offset = 0
         levels = Array(repeating: 0, count: capacity)
     }
 }

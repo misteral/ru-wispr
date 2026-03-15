@@ -20,7 +20,7 @@ struct StreamingOverlayContent: View {
                 .frame(width: 44, height: 44)
                 .padding(.leading, 12)
 
-            WaveformCanvas(levels: state.audio.levels)
+            WaveformCanvas(levels: state.audio.levels, offset: state.audio.offset)
                 .frame(width: 120, height: 24)
                 .padding(.leading, 10)
 
