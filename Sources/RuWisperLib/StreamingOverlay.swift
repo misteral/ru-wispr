@@ -17,7 +17,7 @@ struct StreamingOverlayContent: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            RecordingIndicator()
+            RecordingIndicator(audioLevel: state.audioLevel)
                 .frame(width: 44, height: 44)
                 .padding(.leading, 12)
 
@@ -26,8 +26,8 @@ struct StreamingOverlayContent: View {
                 .padding(.leading, 10)
 
             Text(state.text)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(.white.opacity(0.88))
+                .font(.system(size: 16, weight: .light))
+                .foregroundStyle(Color(white: 0.72))
                 .lineLimit(1)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -37,26 +37,19 @@ struct StreamingOverlayContent: View {
         .frame(width: 560, height: 56)
         .background {
             ZStack {
-                // Dark base layer for glassmorphism depth
+                // Solid dark base — slightly lighter gray per design ref
                 RoundedRectangle(cornerRadius: 28)
-                    .fill(Color.black.opacity(0.3))
+                    .fill(Color(white: 0.22).opacity(0.94))
 
-                // Frosted glass material
+                // Subtle frosted glass on top for depth
                 RoundedRectangle(cornerRadius: 28)
-                    .fill(.ultraThinMaterial)
+                    .fill(.ultraThinMaterial.opacity(0.25))
 
-                // Top-lit edge highlight for glass depth
+                // Visible border stroke matching the design reference
                 RoundedRectangle(cornerRadius: 28)
                     .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                .white.opacity(state.isLocked ? 0.22 : 0.14),
-                                .white.opacity(0.04),
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 0.5
+                        .white.opacity(state.isLocked ? 0.30 : 0.22),
+                        lineWidth: 1.0
                     )
             }
         }
@@ -71,43 +64,48 @@ struct StreamingOverlayContent: View {
 // MARK: - Recording Indicator
 
 struct RecordingIndicator: View {
-    @State private var isPulsing = false
+    var audioLevel: Float
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    // Normalize audio level to 0...1 range for visual response
+    private var intensity: Double {
+        let normalized = min(1.0, Double(audioLevel) / 0.10)
+        return pow(normalized, 0.5) // compress dynamic range
+    }
 
     var body: some View {
         ZStack {
-            // Outer atmospheric glow — radial for natural falloff
+            // Outer glow — pulses with audio level
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [.red.opacity(0.22), .clear],
+                        colors: [.red.opacity(0.18), .clear],
                         center: .center,
-                        startRadius: 6,
-                        endRadius: 22
+                        startRadius: 10,
+                        endRadius: 24
                     )
                 )
                 .frame(width: 44, height: 44)
-                .opacity(reduceMotion ? 0.6 : (isPulsing ? 0.85 : 0.35))
+                .opacity(reduceMotion ? 0.3 : 0.15 + intensity * 0.55)
 
-            // Mid halo ring
+            // Gray circular background (button-like, matching design)
             Circle()
-                .fill(.red.opacity(0.12))
-                .frame(width: 28, height: 28)
-                .opacity(reduceMotion ? 0.4 : (isPulsing ? 0.6 : 0.2))
+                .fill(Color(white: 0.40))
+                .frame(width: 38, height: 38)
 
-            // Core recording dot
+            // Dark ring around the circle (inset look from design)
+            Circle()
+                .strokeBorder(Color.black.opacity(0.35), lineWidth: 1.0)
+                .frame(width: 38, height: 38)
+
+            // Core recording dot — scales slightly with audio
             Circle()
                 .fill(.red)
-                .frame(width: 14, height: 14)
-                .shadow(color: .red.opacity(0.5), radius: 12)
-                .opacity(reduceMotion ? 1.0 : (isPulsing ? 1.0 : 0.85))
+                .frame(width: 11, height: 11)
+                .scaleEffect(reduceMotion ? 1.0 : 1.0 + intensity * 0.15)
+                .shadow(color: .red.opacity(0.4 + intensity * 0.3), radius: 4 + intensity * 4)
         }
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                isPulsing = true
-            }
-        }
+        .animation(.easeOut(duration: 0.08), value: audioLevel)
     }
 }
 
@@ -120,6 +118,14 @@ struct WaveformCanvas: View {
     private let barWidth: Double = 1.5
     private let spacing: Double = 2.5
 
+    // Pre-computed organic pattern — mimics real speech waveform shape
+    // Low edges, irregular peaks in the center-left, natural falloff
+    private static let waveformPattern: [Double] = [
+        0.10, 0.14, 0.12, 0.18, 0.22, 0.15, 0.30, 0.55, 0.70, 0.50,
+        0.85, 1.00, 0.75, 0.90, 0.60, 0.80, 0.95, 0.70, 0.55, 0.65,
+        0.45, 0.35, 0.50, 0.30, 0.20, 0.25, 0.15, 0.12, 0.10, 0.08,
+    ]
+
     var body: some View {
         Canvas { context, size in
             let totalWidth = Double(barCount) * barWidth + Double(barCount - 1) * spacing
@@ -128,22 +134,18 @@ struct WaveformCanvas: View {
 
             let normalized = min(1.0, Double(level) / 0.12)
             let scaled = pow(normalized, 0.4)
-            let centerIndex = Double(barCount - 1) / 2.0
 
             for i in 0..<barCount {
-                // Bell curve envelope: center bars taller, edges taper
-                let distance = abs(Double(i) - centerIndex) / centerIndex
-                let envelope = 1.0 - pow(distance, 1.3) * 0.8
-
-                // Organic per-bar variation
-                let variation = Double.random(in: 0.85...1.15)
-                let targetHeight = max(2.0, scaled * size.height * 0.85 * envelope * variation)
+                let pattern = Self.waveformPattern[i]
+                // Organic variation seeded by bar index for stability
+                let variation = 0.85 + Double((i * 7 + 3) % 11) / 11.0 * 0.30
+                let targetHeight = max(2.0, scaled * size.height * 0.9 * pattern * variation)
                 let barHeight = min(targetHeight, size.height)
 
                 let x = startX + Double(i) * (barWidth + spacing)
                 let y = centerY - barHeight / 2
 
-                let opacity = 0.3 + (barHeight / size.height) * 0.45
+                let opacity = 0.35 + (barHeight / size.height) * 0.50
                 let rect = CGRect(x: x, y: y, width: barWidth, height: barHeight)
                 let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
 
