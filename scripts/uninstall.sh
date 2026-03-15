@@ -1,29 +1,29 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Uninstalling OpenWispr..."
+echo "Uninstalling RuWisper..."
 
 echo "  Stopping service..."
-brew services stop open-wispr 2>/dev/null || true
+brew services stop ru-wisper 2>/dev/null || true
 
 echo "  Removing formula..."
-brew uninstall open-wispr 2>/dev/null || true
+brew uninstall ru-wisper 2>/dev/null || true
 
 echo "  Removing tap..."
-brew untap human37/open-wispr 2>/dev/null || true
+brew untap human37/ru-wisper 2>/dev/null || true
 
 echo "  Removing config and model..."
-rm -rf ~/.config/open-wispr
+rm -rf ~/.config/ru-wisper
 
 echo "  Removing app bundle..."
-rm -rf ~/Applications/OpenWispr.app
-rm -rf /Applications/OpenWispr.app 2>/dev/null || true
+rm -rf ~/Applications/RuWisper.app
+rm -rf /Applications/RuWisper.app 2>/dev/null || true
 
 echo "  Removing logs..."
-rm -f /opt/homebrew/var/log/open-wispr.log
+rm -f /opt/homebrew/var/log/ru-wisper.log
 
 echo "  Resetting permissions..."
-tccutil reset Accessibility com.human37.open-wispr 2>/dev/null || true
+tccutil reset Accessibility com.human37.ru-wisper 2>/dev/null || true
 
 echo ""
-echo "OpenWispr has been completely uninstalled."
+echo "RuWisper has been completely uninstalled."

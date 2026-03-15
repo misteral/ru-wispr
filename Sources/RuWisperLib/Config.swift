@@ -21,7 +21,7 @@ public struct Config: Codable {
     }
 
     public var effectiveEngine: String {
-        return engine ?? "whisper"
+        return engine ?? "gigaam"
     }
 
     public var effectiveSoundFeedback: Bool {
@@ -36,10 +36,10 @@ public struct Config: Codable {
         hotkey: HotkeyConfig(keyCode: 61, modifiers: []),
         modelPath: nil,
         modelSize: "base.en",
-        language: "en",
+        language: "ru",
         spokenPunctuation: FlexBool(false),
         maxRecordings: nil,
-        engine: nil,
+        engine: "gigaam",
         gigaamPath: nil,
         soundFeedback: FlexBool(true),
         streaming: FlexBool(true)
@@ -47,7 +47,7 @@ public struct Config: Codable {
 
     public static var configDir: URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        return home.appendingPathComponent(".config/open-wispr")
+        return home.appendingPathComponent(".config/ru-wisper")
     }
 
     public static var configFile: URL {

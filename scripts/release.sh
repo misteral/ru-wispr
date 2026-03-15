@@ -1,10 +1,10 @@
 #!/bin/bash
-# Build, sign, notarize, and package OpenWispr for distribution
+# Build, sign, notarize, and package RuWisper for distribution
 set -euo pipefail
 
-VERSION="0.19.0"
-APP_NAME="OpenWispr"
-BUNDLE_ID="com.human37.open-wispr"
+VERSION="1.0.0"
+APP_NAME="RuWisper"
+BUNDLE_ID="com.human37.ru-wisper"
 SIGNING_IDENTITY="Developer ID Application: Aleksandr Bobrov (8HR3ZJZ5MZ)"
 TEAM_ID="8HR3ZJZ5MZ"
 
@@ -38,10 +38,10 @@ echo "Found: $SIGNING_IDENTITY"
 
 # --- Build ---
 step "Building with xcodebuild (Release + Metal shaders)..."
-xcodebuild -scheme open-wispr -configuration Release -destination "platform=macOS" build -quiet 2>/dev/null
+xcodebuild -scheme ru-wisper -configuration Release -destination "platform=macOS" build -quiet 2>/dev/null
 
-BINARY=$(find ~/Library/Developer/Xcode/DerivedData/open-wispr-*/Build/Products/Release -name "open-wispr" -not -path "*.dSYM*" -maxdepth 1 2>/dev/null | head -1)
-METALLIB_BUNDLE=$(find ~/Library/Developer/Xcode/DerivedData/open-wispr-*/Build/Products/Release -name "mlx-swift_Cmlx.bundle" -maxdepth 1 2>/dev/null | head -1)
+BINARY=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "ru-wisper" -not -path "*.dSYM*" -maxdepth 1 2>/dev/null | head -1)
+METALLIB_BUNDLE=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "mlx-swift_Cmlx.bundle" -maxdepth 1 2>/dev/null | head -1)
 
 if [ -z "$BINARY" ] || [ -z "$METALLIB_BUNDLE" ]; then
     fail "Build artifacts not found. Check xcodebuild output."
@@ -55,7 +55,7 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
 # Binary
-cp "$BINARY" "$APP_DIR/Contents/MacOS/open-wispr"
+cp "$BINARY" "$APP_DIR/Contents/MacOS/ru-wisper"
 
 # Metal library — MLX searches in multiple locations:
 #   1. <binary_dir>/mlx.metallib (colocated with binary)
@@ -80,7 +80,7 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>open-wispr</string>
+    <string>ru-wisper</string>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleName</key>
@@ -100,9 +100,9 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>OpenWispr needs microphone access to record speech for transcription.</string>
+    <string>RuWisper needs microphone access to record speech for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>OpenWispr needs accessibility access to insert transcribed text.</string>
+    <string>RuWisper needs accessibility access to insert transcribed text.</string>
 </dict>
 </plist>
 PLIST
@@ -130,11 +130,11 @@ codesign --force --options runtime --timestamp \
     "$APP_DIR/Contents/MacOS/mlx-swift_Cmlx.bundle"
 
 # Sign the main binary (with entitlements for Hardened Runtime)
-ENTITLEMENTS="$(cd "$(dirname "$0")/.." && pwd)/OpenWispr.entitlements"
+ENTITLEMENTS="$(cd "$(dirname "$0")/.." && pwd)/RuWisper.entitlements"
 codesign --force --options runtime --timestamp \
     --sign "$SIGNING_IDENTITY" \
     --entitlements "$ENTITLEMENTS" \
-    "$APP_DIR/Contents/MacOS/open-wispr"
+    "$APP_DIR/Contents/MacOS/ru-wisper"
 
 # Sign the entire app
 codesign --force --options runtime --timestamp \
@@ -148,6 +148,13 @@ codesign --verify --deep --strict "$APP_DIR"
 echo "Signature OK ✓"
 
 spctl --assess --type execute --verbose "$APP_DIR" 2>&1 || warn "spctl check failed (expected before notarization)"
+
+# --- Install to /Applications ---
+step "Installing to /Applications..."
+tccutil reset All "$BUNDLE_ID" 2>/dev/null || true
+rm -rf "/Applications/$APP_NAME.app"
+cp -R "$APP_DIR" "/Applications/$APP_NAME.app"
+echo "Installed: /Applications/$APP_NAME.app"
 
 # --- Create DMG ---
 step "Creating DMG..."

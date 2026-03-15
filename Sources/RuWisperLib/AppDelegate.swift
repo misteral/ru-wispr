@@ -145,7 +145,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar.buildMenu()
 
         let hotkeyDesc = KeyCodes.describe(keyCode: config.hotkey.keyCode, modifiers: config.hotkey.modifiers)
-        print("open-wispr v\(OpenWispr.version)")
+        print("ru-wisper v\(RuWisper.version)")
         print("Hotkey: \(hotkeyDesc)")
         print("Engine: \(config.effectiveEngine)")
         if config.effectiveEngine == "gigaam" {

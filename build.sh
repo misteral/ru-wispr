@@ -1,14 +1,14 @@
 #!/bin/bash
-# Build open-wispr with MLX Metal support and install to /Applications
+# Build ru-wisper with MLX Metal support and install to /Applications
 set -e
 
-VERSION="0.19.0"
+VERSION="1.0.0"
 
 echo "==> Building with xcodebuild (compiles Metal shaders)..."
-xcodebuild -scheme open-wispr -configuration Release -destination "platform=macOS" build -quiet 2>/dev/null
+xcodebuild -scheme ru-wisper -configuration Release -destination "platform=macOS" build -quiet 2>/dev/null
 
-DERIVED=$(find ~/Library/Developer/Xcode/DerivedData/open-wispr-*/Build/Products/Release -name "open-wispr" -not -path "*.dSYM*" -maxdepth 1 2>/dev/null | head -1)
-METALLIB_BUNDLE=$(find ~/Library/Developer/Xcode/DerivedData/open-wispr-*/Build/Products/Release -name "mlx-swift_Cmlx.bundle" -maxdepth 1 2>/dev/null | head -1)
+DERIVED=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "ru-wisper" -not -path "*.dSYM*" -maxdepth 1 2>/dev/null | head -1)
+METALLIB_BUNDLE=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "mlx-swift_Cmlx.bundle" -maxdepth 1 2>/dev/null | head -1)
 METALLIB="$METALLIB_BUNDLE/Contents/Resources/default.metallib"
 
 if [ -z "$DERIVED" ] || [ -z "$METALLIB" ]; then
@@ -16,22 +16,22 @@ if [ -z "$DERIVED" ] || [ -z "$METALLIB" ]; then
     exit 1
 fi
 
-echo "==> Installing to /Applications/OpenWispr.app..."
+echo "==> Installing to /Applications/RuWisper.app..."
 
-APP_DIR="/Applications/OpenWispr.app"
+APP_DIR="/Applications/RuWisper.app"
 CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 
 # Force remove the app from TCC (Privacy & Security) database to reset permissions
 # (This doesn't always work perfectly without sudo, but helps sometimes)
-tccutil reset All com.human37.open-wispr 2>/dev/null || true
+tccutil reset All com.human37.ru-wisper 2>/dev/null || true
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS" "$RESOURCES"
 
 # Binary + Metal library (place in both MacOS/ and Resources/ for MLX discovery)
-cp "$DERIVED" "$MACOS/open-wispr"
+cp "$DERIVED" "$MACOS/ru-wisper"
 cp "$METALLIB" "$MACOS/mlx.metallib"
 cp -R "$METALLIB_BUNDLE" "$MACOS/"
 cp -R "$METALLIB_BUNDLE" "$RESOURCES/"
@@ -49,13 +49,13 @@ cat > "$CONTENTS/Info.plist" << PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>open-wispr</string>
+    <string>ru-wisper</string>
     <key>CFBundleIdentifier</key>
-    <string>com.human37.open-wispr</string>
+    <string>com.human37.ru-wisper</string>
     <key>CFBundleName</key>
-    <string>OpenWispr</string>
+    <string>RuWisper</string>
     <key>CFBundleDisplayName</key>
-    <string>OpenWispr</string>
+    <string>RuWisper</string>
     <key>CFBundleVersion</key>
     <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>
@@ -69,19 +69,19 @@ cat > "$CONTENTS/Info.plist" << PLIST
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>OpenWispr needs microphone access to record speech for transcription.</string>
+    <string>RuWisper needs microphone access to record speech for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>OpenWispr needs accessibility access to insert transcribed text.</string>
+    <string>RuWisper needs accessibility access to insert transcribed text.</string>
 </dict>
 </plist>
 PLIST
 
 echo "==> Code signing..."
-codesign --force --deep --sign - --identifier com.human37.open-wispr "$APP_DIR"
+codesign --force --deep --sign - --identifier com.human37.ru-wisper "$APP_DIR"
 
 echo ""
-echo "✅ Installed: /Applications/OpenWispr.app"
+echo "✅ Installed: /Applications/RuWisper.app"
 du -sh "$APP_DIR"
 echo ""
-echo "Launch: open /Applications/OpenWispr.app"
-echo "CLI:    /Applications/OpenWispr.app/Contents/MacOS/open-wispr status"
+echo "Launch: open /Applications/RuWisper.app"
+echo "CLI:    /Applications/RuWisper.app/Contents/MacOS/ru-wisper status"

@@ -1,30 +1,30 @@
 import AppKit
 import Foundation
-import OpenWisprLib
+import RuWisperLib
 
 setvbuf(stdout, nil, _IOLBF, 0)
 setvbuf(stderr, nil, _IOLBF, 0)
 
-let version = OpenWispr.version
+let version = RuWisper.version
 
 func printUsage() {
     print("""
-    open-wispr v\(version) — Push-to-talk voice dictation for macOS
+    ru-wisper v\(version) — Push-to-talk voice dictation for macOS
 
     USAGE:
-        open-wispr start              Start the dictation daemon
-        open-wispr set-hotkey <key>   Set the push-to-talk hotkey
-        open-wispr get-hotkey         Show current hotkey
-        open-wispr set-model <size>   Set the Whisper model
-        open-wispr download-model [size]  Download a Whisper model
-        open-wispr status             Show configuration and status
-        open-wispr --help             Show this help message
+        ru-wisper start              Start the dictation daemon
+        ru-wisper set-hotkey <key>   Set the push-to-talk hotkey
+        ru-wisper get-hotkey         Show current hotkey
+        ru-wisper set-model <size>   Set the Whisper model
+        ru-wisper download-model [size]  Download a Whisper model
+        ru-wisper status             Show configuration and status
+        ru-wisper --help             Show this help message
 
     HOTKEY EXAMPLES:
-        open-wispr set-hotkey rightoption       Right Option key (default)
-        open-wispr set-hotkey globe             Globe/fn key
-        open-wispr set-hotkey f5                 F5 key
-        open-wispr set-hotkey ctrl+space         Ctrl + Space
+        ru-wisper set-hotkey rightoption       Right Option key (default)
+        ru-wisper set-hotkey globe             Globe/fn key
+        ru-wisper set-hotkey f5                 F5 key
+        ru-wisper set-hotkey ctrl+space         Ctrl + Space
 
     ENGINES:
         whisper    Use whisper-cpp (default)
@@ -43,7 +43,7 @@ func cmdStart() {
     app.delegate = delegate
 
     signal(SIGINT) { _ in
-        print("\nStopping open-wispr...")
+        print("\nStopping ru-wisper...")
         exit(0)
     }
 
@@ -53,7 +53,7 @@ func cmdStart() {
 func cmdSetHotkey(_ keyString: String) {
     guard let parsed = KeyCodes.parse(keyString) else {
         print("Error: Unknown key '\(keyString)'")
-        print("Run 'open-wispr --help' for examples")
+        print("Run 'ru-wisper --help' for examples")
         exit(1)
     }
 
@@ -142,7 +142,7 @@ func cmdStatus() {
     let config = Config.load()
     let hotkeyDesc = KeyCodes.describe(keyCode: config.hotkey.keyCode, modifiers: config.hotkey.modifiers)
 
-    print("open-wispr v\(version)")
+    print("ru-wisper v\(version)")
     print("Config:      \(Config.configFile.path)")
     print("Hotkey:      \(hotkeyDesc)")
     print("Engine:      \(config.effectiveEngine)")
@@ -172,19 +172,19 @@ case "start":
     cmdStart()
 case "set-hotkey":
     guard args.count > 2 else {
-        print("Usage: open-wispr set-hotkey <key>")
+        print("Usage: ru-wisper set-hotkey <key>")
         exit(1)
     }
     cmdSetHotkey(args[2])
 case "set-model":
     guard args.count > 2 else {
-        print("Usage: open-wispr set-model <size>")
+        print("Usage: ru-wisper set-model <size>")
         exit(1)
     }
     cmdSetModel(args[2])
 case "set-engine":
     guard args.count > 2 else {
-        print("Usage: open-wispr set-engine <whisper|gigaam>")
+        print("Usage: ru-wisper set-engine <whisper|gigaam>")
         exit(1)
     }
     cmdSetEngine(args[2])
@@ -211,7 +211,7 @@ case "test-gigaam":
             print("Result: \(text)")
         } else {
             print("GigaAM: ready (native MLX)")
-            print("Usage: open-wispr test-gigaam <audio-file>")
+            print("Usage: ru-wisper test-gigaam <audio-file>")
         }
     } catch {
         print("Error: \(error)")

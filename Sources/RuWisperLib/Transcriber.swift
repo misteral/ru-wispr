@@ -130,7 +130,7 @@ enum TranscriberError: LocalizedError {
         case .whisperNotFound:
             return "whisper-cpp not found. Install it with: brew install whisper-cpp"
         case .modelNotFound(let size):
-            return "Whisper model '\(size)' not found. Download it with: open-wispr download-model \(size)"
+            return "Whisper model '\(size)' not found. Download it with: ru-wisper download-model \(size)"
         case .transcriptionFailed:
             return "Transcription failed"
         }

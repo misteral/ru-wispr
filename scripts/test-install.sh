@@ -20,12 +20,12 @@ check_output() {
     fi
 }
 
-CONFIG_FILE="$HOME/.config/open-wispr/config.json"
+CONFIG_FILE="$HOME/.config/ru-wisper/config.json"
 CONFIG_BACKUP=""
 
 backup_config() {
     if [ -f "$CONFIG_FILE" ]; then
-        CONFIG_BACKUP=$(mktemp /tmp/open-wispr-config-backup.XXXXXX)
+        CONFIG_BACKUP=$(mktemp /tmp/ru-wisper-config-backup.XXXXXX)
         cp "$CONFIG_FILE" "$CONFIG_BACKUP"
     fi
 }
@@ -37,14 +37,14 @@ restore_config() {
     fi
 }
 
-echo "open-wispr install smoke tests"
+echo "ru-wisper install smoke tests"
 echo "-------------------------------"
 
 echo ""
 echo "Building..."
 swift build -c release 2>&1 | tail -1
 
-BIN=".build/release/open-wispr"
+BIN=".build/release/ru-wisper"
 
 if [ -x "$BIN" ]; then
     pass "Binary is executable"
@@ -54,7 +54,7 @@ else
 fi
 
 check_output "--help shows usage" "Push-to-talk" "$BIN" --help
-check_output "status shows version" "open-wispr v" "$BIN" status
+check_output "status shows version" "ru-wisper v" "$BIN" status
 check_output "status shows config path" "Config:" "$BIN" status
 check_output "get-hotkey works" "Current hotkey:" "$BIN" get-hotkey
 
@@ -72,27 +72,27 @@ trap - EXIT
 
 echo ""
 echo "Testing app bundle..."
-bash scripts/bundle-app.sh "$BIN" /tmp/OpenWisprTest.app 0.0.0-test
+bash scripts/bundle-app.sh "$BIN" /tmp/RuWisperTest.app 0.0.0-test
 
-if [ -x "/tmp/OpenWisprTest.app/Contents/MacOS/open-wispr" ]; then
+if [ -x "/tmp/RuWisperTest.app/Contents/MacOS/ru-wisper" ]; then
     pass "App bundle has executable"
 else
     fail "App bundle missing executable"
 fi
 
-if [ -f "/tmp/OpenWisprTest.app/Contents/Info.plist" ]; then
+if [ -f "/tmp/RuWisperTest.app/Contents/Info.plist" ]; then
     pass "App bundle has Info.plist"
 else
     fail "App bundle missing Info.plist"
 fi
 
-if grep -q "com.human37.open-wispr" /tmp/OpenWisprTest.app/Contents/Info.plist; then
+if grep -q "com.human37.ru-wisper" /tmp/RuWisperTest.app/Contents/Info.plist; then
     pass "Info.plist has correct bundle ID"
 else
     fail "Info.plist wrong bundle ID"
 fi
 
-rm -rf /tmp/OpenWisprTest.app
+rm -rf /tmp/RuWisperTest.app
 
 if command -v shellcheck &>/dev/null; then
     echo ""

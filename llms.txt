@@ -1,17 +1,17 @@
-# open-wispr
+# ru-wisper
 
 > Free, open-source voice dictation for macOS. Powered by Whisper AI, runs 100% on-device.
 
-open-wispr is a lightweight macOS app that provides push-to-talk voice dictation. Hold a hotkey, speak, release — transcribed text appears at your cursor in any app. It uses OpenAI's Whisper model running locally via whisper.cpp, so no audio or text ever leaves the machine.
+ru-wisper is a lightweight macOS app that provides push-to-talk voice dictation. Hold a hotkey, speak, release — transcribed text appears at your cursor in any app. It uses OpenAI's Whisper model running locally via whisper.cpp, so no audio or text ever leaves the machine.
 
 ## Key Facts
 
 - **Price**: Free and open source (MIT license)
 - **Platform**: macOS (Apple Silicon and Intel)
 - **Privacy**: 100% on-device. Zero network requests. Default maxRecordings=0: temp file + immediate delete, and startup clears any older retained recordings. Set maxRecordings 1–100 to enable Recent Recordings.
-- **Install**: `brew install human37/open-wispr/open-wispr` or guided installer via `curl -fsSL https://open-wispr.pages.dev/install.sh | bash`
-- **Source**: https://github.com/human37/open-wispr
-- **Website**: https://open-wispr.pages.dev/
+- **Install**: `brew install human37/ru-wisper/ru-wisper` or guided installer via `curl -fsSL https://ru-wisper.pages.dev/install.sh | bash`
+- **Source**: https://github.com/human37/ru-wisper
+- **Website**: https://ru-wisper.pages.dev/
 
 ## How It Works
 
@@ -23,13 +23,13 @@ open-wispr is a lightweight macOS app that provides push-to-talk voice dictation
 
 - Works in any app (text editors, browsers, Slack, Terminal, etc.)
 - Multiple Whisper model sizes (tiny, base, small, medium, large)
-- Configurable hotkey, language, and model via `~/.config/open-wispr/config.json`
+- Configurable hotkey, language, and model via `~/.config/ru-wisper/config.json`
 - Runs as a background Homebrew service
 - No GUI, no menubar icon, no overhead
 
 ## Comparison to Alternatives
 
-| Feature | open-wispr | Wispr Flow | Superwhisper | MacWhisper |
+| Feature | ru-wisper | Wispr Flow | Superwhisper | MacWhisper |
 |---|---|---|---|---|
 | Price | Free | $15/mo | $8.49/mo | $69 |
 | Open Source | Yes | No | No | No |
@@ -48,7 +48,7 @@ open-wispr is a lightweight macOS app that provides push-to-talk voice dictation
 }
 ```
 
-Config file location: `~/.config/open-wispr/config.json`
+Config file location: `~/.config/ru-wisper/config.json`
 
 ## System Requirements
 

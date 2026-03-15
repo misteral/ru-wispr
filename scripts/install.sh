@@ -11,7 +11,7 @@ NC='\033[0m'
 
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 SPIN_PID=""
-LOG=$(mktemp /tmp/open-wispr-install.XXXXXX)
+LOG=$(mktemp /tmp/ru-wisper-install.XXXXXX)
 APP_PID=""
 
 cleanup() {
@@ -106,7 +106,7 @@ done
 
 # ── Header ────────────────────────────────────────────────────────────
 printf "\n"
-printf "  ${BOLD}open-wispr${NC} ${DIM}— local voice dictation for macOS${NC}\n"
+printf "  ${BOLD}ru-wisper${NC} ${DIM}— local voice dictation for macOS${NC}\n"
 printf "  ${DIM}────────────────────────────────────────────${NC}\n"
 
 # ── Prerequisites ────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ step "Checking prerequisites"
 
 if [[ "$(uname -m)" != "arm64" ]]; then
     fail "Apple Silicon (M1 or later) is required."
-    die "open-wispr uses Metal GPU acceleration which is not available on Intel Macs."
+    die "ru-wisper uses Metal GPU acceleration which is not available on Intel Macs."
 fi
 ok "Apple Silicon"
 
@@ -130,16 +130,16 @@ fi
 ok "Homebrew"
 
 # ── Step 1: Clean up ─────────────────────────────────────────────────
-if brew list open-wispr &>/dev/null || [ -d ~/Applications/OpenWispr.app ]; then
+if brew list ru-wisper &>/dev/null || [ -d ~/Applications/RuWisper.app ]; then
     step "Removing previous installation"
     start_spin "Cleaning up..."
 
-    brew services stop open-wispr </dev/null >/dev/null 2>&1 || true
-    brew uninstall --force open-wispr </dev/null >/dev/null 2>&1 || true
-    brew untap human37/open-wispr </dev/null >/dev/null 2>&1 || true
-    tccutil reset Accessibility com.human37.open-wispr </dev/null >/dev/null 2>&1 || true
-    tccutil reset Microphone com.human37.open-wispr </dev/null >/dev/null 2>&1 || true
-    rm -rf ~/Applications/OpenWispr.app
+    brew services stop ru-wisper </dev/null >/dev/null 2>&1 || true
+    brew uninstall --force ru-wisper </dev/null >/dev/null 2>&1 || true
+    brew untap human37/ru-wisper </dev/null >/dev/null 2>&1 || true
+    tccutil reset Accessibility com.human37.ru-wisper </dev/null >/dev/null 2>&1 || true
+    tccutil reset Microphone com.human37.ru-wisper </dev/null >/dev/null 2>&1 || true
+    rm -rf ~/Applications/RuWisper.app
 
     stop_spin
     ok "Clean"
@@ -148,45 +148,45 @@ fi
 # ── Step 2: Install ──────────────────────────────────────────────────
 step "Installing"
 
-start_spin "Tapping human37/open-wispr..."
-TAP_OUT=$(brew tap human37/open-wispr --force </dev/null 2>&1) || {
+start_spin "Tapping human37/ru-wisper..."
+TAP_OUT=$(brew tap human37/ru-wisper --force </dev/null 2>&1) || {
     stop_spin
-    fail "Failed to tap human37/open-wispr"
+    fail "Failed to tap human37/ru-wisper"
     info "$TAP_OUT"
     die "Make sure git is installed."
 }
 stop_spin
-ok "Tapped ${DIM}human37/open-wispr${NC}"
+ok "Tapped ${DIM}human37/ru-wisper${NC}"
 
-TAP_DIR="$(brew --repository human37/open-wispr 2>/dev/null)"
+TAP_DIR="$(brew --repository human37/ru-wisper 2>/dev/null)"
 if [ -n "$VERSION" ]; then
     FORMULA_COMMIT=$(git -C "$TAP_DIR" log --all --grep="v${VERSION}" --format=%H -1)
     if [ -z "$FORMULA_COMMIT" ]; then
         die "Version ${VERSION} not found in tap history"
     fi
-    git -C "$TAP_DIR" checkout "$FORMULA_COMMIT" -- open-wispr.rb 2>/dev/null
+    git -C "$TAP_DIR" checkout "$FORMULA_COMMIT" -- ru-wisper.rb 2>/dev/null
 fi
 
-start_spin "Installing open-wispr${VERSION:+ v$VERSION}..."
-brew install open-wispr </dev/null >/dev/null 2>&1 || true
-brew reinstall open-wispr </dev/null >/dev/null 2>&1 || true
+start_spin "Installing ru-wisper${VERSION:+ v$VERSION}..."
+brew install ru-wisper </dev/null >/dev/null 2>&1 || true
+brew reinstall ru-wisper </dev/null >/dev/null 2>&1 || true
 if [ -n "$VERSION" ]; then
     git -C "$TAP_DIR" checkout -- . 2>/dev/null || true
 fi
 stop_spin
 
-BREW_PREFIX="$(brew --prefix open-wispr 2>/dev/null)"
-CELLAR_BIN="${BREW_PREFIX}/OpenWispr.app/Contents/MacOS/open-wispr"
+BREW_PREFIX="$(brew --prefix ru-wisper 2>/dev/null)"
+CELLAR_BIN="${BREW_PREFIX}/RuWisper.app/Contents/MacOS/ru-wisper"
 
 if [ ! -x "$CELLAR_BIN" ]; then
-    die "Installation failed — binary not found. Run 'brew install open-wispr' manually."
+    die "Installation failed — binary not found. Run 'brew install ru-wisper' manually."
 fi
 ok "Installed"
 
 mkdir -p ~/Applications
-rm -rf ~/Applications/OpenWispr.app
-ln -sf "${BREW_PREFIX}/OpenWispr.app" ~/Applications/OpenWispr.app
-APP_BIN=~/Applications/OpenWispr.app/Contents/MacOS/open-wispr
+rm -rf ~/Applications/RuWisper.app
+ln -sf "${BREW_PREFIX}/RuWisper.app" ~/Applications/RuWisper.app
+APP_BIN=~/Applications/RuWisper.app/Contents/MacOS/ru-wisper
 
 # ── Step 3: Permissions ──────────────────────────────────────────────
 step "Setting up permissions"
@@ -221,7 +221,7 @@ if wait_for_log "Accessibility: granted" 5; then
 else
     printf "\r\033[K"
     info "macOS needs Accessibility permission to detect your hotkey."
-    info "System Settings will open — find ${BOLD}OpenWispr${NC} and toggle it ${BOLD}ON${NC}.\n"
+    info "System Settings will open — find ${BOLD}RuWisper${NC} and toggle it ${BOLD}ON${NC}.\n"
 
     if ! wait_for_log "Accessibility: granted" 300 "Waiting for you to grant Accessibility permission..."; then
         die "Timed out waiting for Accessibility permission."
@@ -253,21 +253,21 @@ APP_PID=""
 
 step "Starting background service"
 start_spin "Starting..."
-brew services start open-wispr </dev/null >/dev/null 2>&1 || true
+brew services start ru-wisper </dev/null >/dev/null 2>&1 || true
 stop_spin
 
 sleep 1
-if brew services list 2>/dev/null | grep -q "open-wispr.*started"; then
+if brew services list 2>/dev/null | grep -q "ru-wisper.*started"; then
     ok "Running as background service"
 else
     ok "Service registered"
-    info "If not running, start manually: brew services start open-wispr"
+    info "If not running, start manually: brew services start ru-wisper"
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────
 hotkey=$(grep "^Hotkey:" "$LOG" 2>/dev/null | tail -1 | sed 's/^Hotkey: //')
 model=$(grep "^Model:" "$LOG" 2>/dev/null | tail -1 | sed 's/^Model: //')
-version=$(grep "^open-wispr v" "$LOG" 2>/dev/null | tail -1)
+version=$(grep "^ru-wisper v" "$LOG" 2>/dev/null | tail -1)
 
 printf "\n"
 printf "  ${DIM}────────────────────────────────────────────${NC}\n"

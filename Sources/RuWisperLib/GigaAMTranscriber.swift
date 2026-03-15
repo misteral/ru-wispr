@@ -15,10 +15,9 @@ public class GigaAMTranscriber {
     private let modelDir: URL
     private var isLoaded = false
 
-    /// Default model directory: ~/Developer/personal/GigaAM/mlx_convert/gigaam-v3-ctc-mlx
+    /// Default model directory: ~/.config/ru-wisper/models/gigaam-v3-ctc-mlx
     public static let defaultModelDir: URL = {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Developer/personal/GigaAM/mlx_convert/gigaam-v3-ctc-mlx")
+        Config.configDir.appendingPathComponent("models/gigaam-v3-ctc-mlx")
     }()
 
     public init(modelPath: String? = nil) {

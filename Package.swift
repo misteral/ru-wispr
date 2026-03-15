@@ -2,20 +2,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "open-wispr",
+    name: "ru-wisper",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.21.0"),
     ],
     targets: [
         .target(
-            name: "OpenWisprLib",
+            name: "RuWisperLib",
             dependencies: [
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXNN", package: "mlx-swift"),
                 .product(name: "MLXFFT", package: "mlx-swift"),
             ],
-            path: "Sources/OpenWisprLib",
+            path: "Sources/RuWisperLib",
             linkerSettings: [
                 .linkedFramework("CoreAudio"),
                 .linkedFramework("AVFoundation"),
@@ -23,14 +23,14 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "open-wispr",
-            dependencies: ["OpenWisprLib"],
-            path: "Sources/OpenWispr"
+            name: "ru-wisper",
+            dependencies: ["RuWisperLib"],
+            path: "Sources/RuWisper"
         ),
         .testTarget(
-            name: "OpenWisprTests",
-            dependencies: ["OpenWisprLib"],
-            path: "Tests/OpenWisprTests"
+            name: "RuWisperTests",
+            dependencies: ["RuWisperLib"],
+            path: "Tests/RuWisperTests"
         ),
     ],
     swiftLanguageModes: [.v5]

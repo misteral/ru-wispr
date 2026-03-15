@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-CONFIG_FILE="$HOME/.config/open-wispr/config.json"
+CONFIG_FILE="$HOME/.config/ru-wisper/config.json"
 
 # Read a JSON value using grep/sed (no python dependency)
 read_config() {
@@ -109,7 +109,7 @@ parse_hotkey_input() {
     echo "${code}|${mods_json}"
 }
 
-echo "open-wispr dev build"
+echo "ru-wisper dev build"
 echo "────────────────────"
 
 # Read current config values
@@ -222,14 +222,14 @@ echo "────────────────────"
 
 # Kill any running instances
 echo "  Stopping running instances..."
-pkill -f "open-wispr start" 2>/dev/null || true
-brew services stop open-wispr 2>/dev/null || true
+pkill -f "ru-wisper start" 2>/dev/null || true
+brew services stop ru-wisper 2>/dev/null || true
 sleep 1
 
 # Uninstall brew version
-if brew list open-wispr &>/dev/null; then
+if brew list ru-wisper &>/dev/null; then
     echo "  Removing brew installation..."
-    brew uninstall --force open-wispr 2>/dev/null || true
+    brew uninstall --force ru-wisper 2>/dev/null || true
 fi
 
 if ! brew list whisper-cpp &>/dev/null; then
@@ -243,13 +243,13 @@ swift build -c release 2>&1 | tail -1
 
 # Bundle the app
 echo "  Bundling app..."
-bash scripts/bundle-app.sh .build/release/open-wispr OpenWispr.app dev
+bash scripts/bundle-app.sh .build/release/ru-wisper RuWisper.app dev
 
 # Copy to ~/Applications so macOS recognizes it for permissions
-rm -rf ~/Applications/OpenWispr.app
-cp -R OpenWispr.app ~/Applications/OpenWispr.app
-rm -rf OpenWispr.app
+rm -rf ~/Applications/RuWisper.app
+cp -R RuWisper.app ~/Applications/RuWisper.app
+rm -rf RuWisper.app
 
 # Run
 echo "  Starting..."
-~/Applications/OpenWispr.app/Contents/MacOS/open-wispr start
+~/Applications/RuWisper.app/Contents/MacOS/ru-wisper start

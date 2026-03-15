@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenWisprLib
+@testable import RuWisperLib
 
 final class ConfigTests: XCTestCase {
 
