@@ -18,35 +18,35 @@ struct StreamingOverlayContent: View {
     var body: some View {
         HStack(spacing: 0) {
             RecordingIndicator()
-                .frame(width: 60, height: 60)
+                .frame(width: 44, height: 44)
                 .padding(.leading, 12)
 
             WaveformCanvas(level: state.audioLevel)
-                .frame(width: 130, height: 32)
+                .frame(width: 120, height: 24)
                 .padding(.leading, 10)
 
             Text(state.text)
                 .font(.system(size: 16, weight: .regular))
                 .foregroundStyle(.white.opacity(0.88))
-                .lineLimit(2)
+                .lineLimit(1)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 18)
                 .padding(.trailing, 24)
         }
-        .frame(width: 560, height: 76)
+        .frame(width: 560, height: 56)
         .background {
             ZStack {
                 // Dark base layer for glassmorphism depth
-                RoundedRectangle(cornerRadius: 38)
+                RoundedRectangle(cornerRadius: 28)
                     .fill(Color.black.opacity(0.3))
 
                 // Frosted glass material
-                RoundedRectangle(cornerRadius: 38)
+                RoundedRectangle(cornerRadius: 28)
                     .fill(.ultraThinMaterial)
 
                 // Top-lit edge highlight for glass depth
-                RoundedRectangle(cornerRadius: 38)
+                RoundedRectangle(cornerRadius: 28)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
@@ -60,7 +60,7 @@ struct StreamingOverlayContent: View {
                     )
             }
         }
-        .clipShape(.rect(cornerRadius: 38))
+        .clipShape(.rect(cornerRadius: 28))
         .animation(.easeInOut(duration: 0.4), value: state.isLocked)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .combine)
@@ -82,24 +82,24 @@ struct RecordingIndicator: View {
                     RadialGradient(
                         colors: [.red.opacity(0.22), .clear],
                         center: .center,
-                        startRadius: 8,
-                        endRadius: 30
+                        startRadius: 6,
+                        endRadius: 22
                     )
                 )
-                .frame(width: 60, height: 60)
+                .frame(width: 44, height: 44)
                 .opacity(reduceMotion ? 0.6 : (isPulsing ? 0.85 : 0.35))
 
             // Mid halo ring
             Circle()
                 .fill(.red.opacity(0.12))
-                .frame(width: 38, height: 38)
+                .frame(width: 28, height: 28)
                 .opacity(reduceMotion ? 0.4 : (isPulsing ? 0.6 : 0.2))
 
             // Core recording dot
             Circle()
                 .fill(.red)
-                .frame(width: 16, height: 16)
-                .shadow(color: .red.opacity(0.5), radius: 16)
+                .frame(width: 14, height: 14)
+                .shadow(color: .red.opacity(0.5), radius: 12)
                 .opacity(reduceMotion ? 1.0 : (isPulsing ? 1.0 : 0.85))
         }
         .onAppear {
@@ -158,11 +158,11 @@ struct WaveformCanvas: View {
 class StreamingOverlay: NSPanel {
     private let state = StreamingOverlayState()
     private let pillWidth: Double = 560
-    private let pillHeight: Double = 76
+    private let pillHeight: Double = 56
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 76),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 56),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
