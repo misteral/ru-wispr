@@ -13,11 +13,12 @@ class StreamingOverlay: NSPanel {
     private let transcriptionLabel = NSTextField(labelWithString: "")
     private let recordingDot = NSView()
     private let dotGlow = NSView()
+    private let dotOuterGlow = NSView()
     private let waveformView = WaveformView()
     
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 40),
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 56),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -37,46 +38,52 @@ class StreamingOverlay: NSPanel {
         // 1. Main Pill Container (Fixed Size)
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.state = .active
-        visualEffectView.material = .hudWindow
+        visualEffectView.material = .popover
         visualEffectView.wantsLayer = true
-        visualEffectView.layer?.cornerRadius = 20 // Full pill shape for 40px height
-        visualEffectView.layer?.borderWidth = 1.0
-        visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.15).cgColor
+        visualEffectView.layer?.cornerRadius = 28
+        visualEffectView.layer?.borderWidth = 0.5
+        visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
         visualEffectView.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(visualEffectView)
         
         // 2. Recording Dot & Glow
+        dotOuterGlow.wantsLayer = true
+        dotOuterGlow.layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.10).cgColor
+        dotOuterGlow.layer?.cornerRadius = 24
+        dotOuterGlow.translatesAutoresizingMaskIntoConstraints = false
+
         dotGlow.wantsLayer = true
-        dotGlow.layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.3).cgColor
-        dotGlow.layer?.cornerRadius = 14
+        dotGlow.layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.20).cgColor
+        dotGlow.layer?.cornerRadius = 20
         dotGlow.translatesAutoresizingMaskIntoConstraints = false
 
         recordingDot.wantsLayer = true
         recordingDot.layer?.backgroundColor = NSColor.systemRed.cgColor
-        recordingDot.layer?.cornerRadius = 7
+        recordingDot.layer?.cornerRadius = 6
         recordingDot.layer?.shadowColor = NSColor.systemRed.cgColor
         recordingDot.layer?.shadowOffset = .zero
-        recordingDot.layer?.shadowRadius = 6
-        recordingDot.layer?.shadowOpacity = 0.5
+        recordingDot.layer?.shadowRadius = 12
+        recordingDot.layer?.shadowOpacity = 0.6
         recordingDot.translatesAutoresizingMaskIntoConstraints = false
-        
+
         let dotContainer = NSView()
+        dotContainer.addSubview(dotOuterGlow)
         dotContainer.addSubview(dotGlow)
         dotContainer.addSubview(recordingDot)
         dotContainer.translatesAutoresizingMaskIntoConstraints = false
         
         // 3. Transcription Label (Fixed width, truncates head to show progress)
-        transcriptionLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        transcriptionLabel.font = .systemFont(ofSize: 15, weight: .regular)
         transcriptionLabel.textColor = .white
         transcriptionLabel.lineBreakMode = .byTruncatingHead
-        transcriptionLabel.maximumNumberOfLines = 1
+        transcriptionLabel.maximumNumberOfLines = 2
         transcriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         
         // 4. Stack View
         contentStack.orientation = .horizontal
         contentStack.alignment = .centerY
-        contentStack.spacing = 10
-        contentStack.edgeInsets = NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        contentStack.spacing = 14
+        contentStack.edgeInsets = NSEdgeInsets(top: 0, left: 20, bottom: 0, right: 24)
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         
         dotContainer.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -95,10 +102,10 @@ class StreamingOverlay: NSPanel {
             // Visual Effect View (Pill) - Fixed Size
             visualEffectView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
             visualEffectView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            visualEffectView.heightAnchor.constraint(equalToConstant: 40),
+            visualEffectView.heightAnchor.constraint(equalToConstant: 56),
             visualEffectView.widthAnchor.constraint(equalToConstant: 500),
-            
-            containerView.heightAnchor.constraint(equalToConstant: 40),
+
+            containerView.heightAnchor.constraint(equalToConstant: 56),
             containerView.widthAnchor.constraint(equalToConstant: 500),
             
             // Content Stack
@@ -110,20 +117,25 @@ class StreamingOverlay: NSPanel {
             // Dot & Glow
             recordingDot.centerXAnchor.constraint(equalTo: dotContainer.centerXAnchor),
             recordingDot.centerYAnchor.constraint(equalTo: dotContainer.centerYAnchor),
-            recordingDot.widthAnchor.constraint(equalToConstant: 14),
-            recordingDot.heightAnchor.constraint(equalToConstant: 14),
+            recordingDot.widthAnchor.constraint(equalToConstant: 12),
+            recordingDot.heightAnchor.constraint(equalToConstant: 12),
 
             dotGlow.centerXAnchor.constraint(equalTo: dotContainer.centerXAnchor),
             dotGlow.centerYAnchor.constraint(equalTo: dotContainer.centerYAnchor),
-            dotGlow.widthAnchor.constraint(equalToConstant: 28),
-            dotGlow.heightAnchor.constraint(equalToConstant: 28),
+            dotGlow.widthAnchor.constraint(equalToConstant: 40),
+            dotGlow.heightAnchor.constraint(equalToConstant: 40),
 
-            dotContainer.widthAnchor.constraint(equalToConstant: 28),
-            dotContainer.heightAnchor.constraint(equalToConstant: 28),
+            dotOuterGlow.centerXAnchor.constraint(equalTo: dotContainer.centerXAnchor),
+            dotOuterGlow.centerYAnchor.constraint(equalTo: dotContainer.centerYAnchor),
+            dotOuterGlow.widthAnchor.constraint(equalToConstant: 48),
+            dotOuterGlow.heightAnchor.constraint(equalToConstant: 48),
+
+            dotContainer.widthAnchor.constraint(equalToConstant: 48),
+            dotContainer.heightAnchor.constraint(equalToConstant: 48),
             
-            // Waveform (Smaller)
-            waveformView.widthAnchor.constraint(equalToConstant: 100),
-            waveformView.heightAnchor.constraint(equalToConstant: 20)
+            // Waveform
+            waveformView.widthAnchor.constraint(equalToConstant: 140),
+            waveformView.heightAnchor.constraint(equalToConstant: 28)
         ])
         
         startGlowAnimation()
@@ -134,21 +146,31 @@ class StreamingOverlay: NSPanel {
         let dotOpacity = CABasicAnimation(keyPath: "opacity")
         dotOpacity.fromValue = 0.75
         dotOpacity.toValue = 1.0
-        dotOpacity.duration = 1.2
+        dotOpacity.duration = 1.4
         dotOpacity.autoreverses = true
         dotOpacity.repeatCount = .infinity
         dotOpacity.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         recordingDot.layer?.add(dotOpacity, forKey: "dotPulse")
 
-        // Glow: opacity-only breathing (no transform.scale — it shifts with Auto Layout)
+        // Mid glow: opacity-only breathing
         let glowOpacity = CABasicAnimation(keyPath: "opacity")
-        glowOpacity.fromValue = 0.15
-        glowOpacity.toValue = 0.6
-        glowOpacity.duration = 1.2
+        glowOpacity.fromValue = 0.10
+        glowOpacity.toValue = 0.50
+        glowOpacity.duration = 1.4
         glowOpacity.autoreverses = true
         glowOpacity.repeatCount = .infinity
         glowOpacity.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         dotGlow.layer?.add(glowOpacity, forKey: "glow")
+
+        // Outer glow: slower breathing, offset for organic feel
+        let outerGlowOpacity = CABasicAnimation(keyPath: "opacity")
+        outerGlowOpacity.fromValue = 0.05
+        outerGlowOpacity.toValue = 0.25
+        outerGlowOpacity.duration = 1.8
+        outerGlowOpacity.autoreverses = true
+        outerGlowOpacity.repeatCount = .infinity
+        outerGlowOpacity.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dotOuterGlow.layer?.add(outerGlowOpacity, forKey: "outerGlow")
     }
     
     func updateText(_ text: String) {
@@ -184,7 +206,7 @@ class StreamingOverlay: NSPanel {
             self.animator().alphaValue = 0
         }, completionHandler: {
             self.orderOut(nil)
-            self.visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.15).cgColor
+            self.visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
         })
     }
     
@@ -195,7 +217,7 @@ class StreamingOverlay: NSPanel {
                 if locked {
                     self.visualEffectView.layer?.borderColor = NSColor.systemOrange.withAlphaComponent(0.5).cgColor
                 } else {
-                    self.visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.15).cgColor
+                    self.visualEffectView.layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
                 }
             }
         }
@@ -205,7 +227,7 @@ class StreamingOverlay: NSPanel {
         if let screen = NSScreen.main {
             let screenRect = screen.visibleFrame
             let width: CGFloat = 500
-            let height: CGFloat = 40
+            let height: CGFloat = 56
             let x = screenRect.origin.x + (screenRect.width - width) / 2
             let y = screenRect.origin.y + 60
             self.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
@@ -217,8 +239,8 @@ class StreamingOverlay: NSPanel {
 
 class WaveformView: NSView {
     private var bars: [CALayer] = []
-    private let barCount = 20
-    private let spacing: CGFloat = 3.0
+    private let barCount = 30
+    private let spacing: CGFloat = 2.5
     private var currentLevel: Float = 0
 
     override init(frame: NSRect) {
@@ -270,7 +292,7 @@ class WaveformView: NSView {
             for (i, bar) in self.bars.enumerated() {
                 // Bell curve envelope: center bars taller, edges shorter
                 let distance = abs(Float(i) - centerIndex) / centerIndex
-                let envelope = CGFloat(1.0 - pow(distance, 1.5) * 0.6)
+                let envelope = CGFloat(1.0 - pow(distance, 1.2) * 0.75)
 
                 let randomFactor = CGFloat(Float.random(in: 0.85...1.15))
                 let targetHeight = max(2, scaled * self.frame.height * 0.95 * envelope * randomFactor)
