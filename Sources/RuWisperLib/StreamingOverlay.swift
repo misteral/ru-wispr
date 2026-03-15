@@ -48,12 +48,16 @@ class StreamingOverlay: NSPanel {
         // 2. Recording Dot & Glow
         dotGlow.wantsLayer = true
         dotGlow.layer?.backgroundColor = NSColor.systemRed.withAlphaComponent(0.3).cgColor
-        dotGlow.layer?.cornerRadius = 8
+        dotGlow.layer?.cornerRadius = 14
         dotGlow.translatesAutoresizingMaskIntoConstraints = false
-        
+
         recordingDot.wantsLayer = true
         recordingDot.layer?.backgroundColor = NSColor.systemRed.cgColor
-        recordingDot.layer?.cornerRadius = 4
+        recordingDot.layer?.cornerRadius = 7
+        recordingDot.layer?.shadowColor = NSColor.systemRed.cgColor
+        recordingDot.layer?.shadowOffset = .zero
+        recordingDot.layer?.shadowRadius = 6
+        recordingDot.layer?.shadowOpacity = 0.5
         recordingDot.translatesAutoresizingMaskIntoConstraints = false
         
         let dotContainer = NSView()
@@ -75,6 +79,10 @@ class StreamingOverlay: NSPanel {
         contentStack.edgeInsets = NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         
+        dotContainer.setContentCompressionResistancePriority(.required, for: .horizontal)
+        waveformView.setContentCompressionResistancePriority(.required, for: .horizontal)
+        transcriptionLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        transcriptionLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         contentStack.addArrangedSubview(dotContainer)
         contentStack.addArrangedSubview(waveformView)
         contentStack.addArrangedSubview(transcriptionLabel)
@@ -102,19 +110,19 @@ class StreamingOverlay: NSPanel {
             // Dot & Glow
             recordingDot.centerXAnchor.constraint(equalTo: dotContainer.centerXAnchor),
             recordingDot.centerYAnchor.constraint(equalTo: dotContainer.centerYAnchor),
-            recordingDot.widthAnchor.constraint(equalToConstant: 8),
-            recordingDot.heightAnchor.constraint(equalToConstant: 8),
-            
+            recordingDot.widthAnchor.constraint(equalToConstant: 14),
+            recordingDot.heightAnchor.constraint(equalToConstant: 14),
+
             dotGlow.centerXAnchor.constraint(equalTo: dotContainer.centerXAnchor),
             dotGlow.centerYAnchor.constraint(equalTo: dotContainer.centerYAnchor),
-            dotGlow.widthAnchor.constraint(equalToConstant: 16),
-            dotGlow.heightAnchor.constraint(equalToConstant: 16),
-            
-            dotContainer.widthAnchor.constraint(equalToConstant: 16),
-            dotContainer.heightAnchor.constraint(equalToConstant: 16),
+            dotGlow.widthAnchor.constraint(equalToConstant: 28),
+            dotGlow.heightAnchor.constraint(equalToConstant: 28),
+
+            dotContainer.widthAnchor.constraint(equalToConstant: 28),
+            dotContainer.heightAnchor.constraint(equalToConstant: 28),
             
             // Waveform (Smaller)
-            waveformView.widthAnchor.constraint(equalToConstant: 60),
+            waveformView.widthAnchor.constraint(equalToConstant: 100),
             waveformView.heightAnchor.constraint(equalToConstant: 20)
         ])
         
@@ -122,14 +130,25 @@ class StreamingOverlay: NSPanel {
     }
     
     private func startGlowAnimation() {
-        let anim = CABasicAnimation(keyPath: "opacity")
-        anim.fromValue = 0.3
-        anim.toValue = 0.8
-        anim.duration = 0.8
-        anim.autoreverses = true
-        anim.repeatCount = .infinity
-        anim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        dotGlow.layer?.add(anim, forKey: "glow")
+        // Dot: subtle opacity breathing (no scale to avoid anchor-point offset)
+        let dotOpacity = CABasicAnimation(keyPath: "opacity")
+        dotOpacity.fromValue = 0.75
+        dotOpacity.toValue = 1.0
+        dotOpacity.duration = 1.2
+        dotOpacity.autoreverses = true
+        dotOpacity.repeatCount = .infinity
+        dotOpacity.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        recordingDot.layer?.add(dotOpacity, forKey: "dotPulse")
+
+        // Glow: opacity-only breathing (no transform.scale — it shifts with Auto Layout)
+        let glowOpacity = CABasicAnimation(keyPath: "opacity")
+        glowOpacity.fromValue = 0.15
+        glowOpacity.toValue = 0.6
+        glowOpacity.duration = 1.2
+        glowOpacity.autoreverses = true
+        glowOpacity.repeatCount = .infinity
+        glowOpacity.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dotGlow.layer?.add(glowOpacity, forKey: "glow")
     }
     
     func updateText(_ text: String) {
@@ -199,18 +218,19 @@ class StreamingOverlay: NSPanel {
 class WaveformView: NSView {
     private var bars: [CALayer] = []
     private let barCount = 20
-    private let spacing: CGFloat = 2.5
-    
+    private let spacing: CGFloat = 3.0
+    private var currentLevel: Float = 0
+
     override init(frame: NSRect) {
         super.init(frame: frame)
         setupBars()
     }
-    
+
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         setupBars()
     }
-    
+
     private func setupBars() {
         self.wantsLayer = true
         for _ in 0..<barCount {
@@ -221,28 +241,41 @@ class WaveformView: NSView {
             bars.append(bar)
         }
     }
-    
+
     override func layout() {
         super.layout()
         let barWidth: CGFloat = 2.0
         let totalWidth = CGFloat(barCount) * barWidth + CGFloat(barCount - 1) * spacing
         let startX = (frame.width - totalWidth) / 2
-        
+
         for (i, bar) in bars.enumerated() {
             let x = startX + CGFloat(i) * (barWidth + spacing)
             bar.frame = NSRect(x: x, y: frame.height / 2 - 1, width: barWidth, height: 2)
         }
     }
-    
+
     func updateLevel(_ level: Float) {
         DispatchQueue.main.async {
+            // Smooth audio level: fast attack, moderate release
+            self.currentLevel = self.currentLevel * 0.3 + level * 0.7
+
+            // Logarithmic scaling: normalize to typical speech RMS range
+            let normalized = min(1.0, CGFloat(self.currentLevel) / 0.12)
+            let scaled = pow(normalized, 0.4)
+
+            let centerIndex = Float(self.barCount - 1) / 2.0
+
             CATransaction.begin()
             CATransaction.setAnimationDuration(0.1)
-            for bar in self.bars {
-                let randomFactor = Float.random(in: 0.7...1.3)
-                let height = CGFloat(max(2, level * 80 * randomFactor))
-                let clampedHeight = min(height, self.frame.height)
-                
+            for (i, bar) in self.bars.enumerated() {
+                // Bell curve envelope: center bars taller, edges shorter
+                let distance = abs(Float(i) - centerIndex) / centerIndex
+                let envelope = CGFloat(1.0 - pow(distance, 1.5) * 0.6)
+
+                let randomFactor = CGFloat(Float.random(in: 0.85...1.15))
+                let targetHeight = max(2, scaled * self.frame.height * 0.95 * envelope * randomFactor)
+                let clampedHeight = min(targetHeight, self.frame.height)
+
                 let barWidth = bar.frame.width
                 let x = bar.frame.origin.x
                 bar.frame = NSRect(x: x, y: (self.frame.height - clampedHeight) / 2, width: barWidth, height: clampedHeight)
