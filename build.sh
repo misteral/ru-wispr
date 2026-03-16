@@ -3,17 +3,31 @@
 set -e
 
 VERSION="1.0.0"
+BUILD_DIR="$(pwd)/.build/xcode"
 
 echo "==> Building with xcodebuild (compiles Metal shaders)..."
-xcodebuild -scheme ru-wisper -configuration Release -destination "platform=macOS" build -quiet 2>/dev/null
+# Use project-local derivedDataPath for deterministic output
+xcodebuild -scheme ru-wisper -configuration Release \
+    -destination "platform=macOS" \
+    -derivedDataPath "$BUILD_DIR" \
+    build 2>&1 | tail -3
 
-DERIVED=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "ru-wisper" -not -path "*.dSYM*" -maxdepth 1 2>/dev/null | head -1)
-METALLIB_BUNDLE=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "mlx-swift_Cmlx.bundle" -maxdepth 1 2>/dev/null | head -1)
+PRODUCTS="$BUILD_DIR/Build/Products/Release"
+DERIVED="$PRODUCTS/ru-wisper"
+METALLIB_BUNDLE="$PRODUCTS/mlx-swift_Cmlx.bundle"
 METALLIB="$METALLIB_BUNDLE/Contents/Resources/default.metallib"
 
-if [ -z "$DERIVED" ] || [ -z "$METALLIB" ]; then
-    echo "Error: Build artifacts not found"
+if [ ! -f "$DERIVED" ] || [ ! -f "$METALLIB" ]; then
+    echo "Error: Build artifacts not found in $PRODUCTS"
     exit 1
+fi
+
+# Verify binary was actually rebuilt (modified within last 60 seconds)
+BINARY_AGE=$(( $(date +%s) - $(stat -f %m "$DERIVED") ))
+if [ "$BINARY_AGE" -gt 60 ]; then
+    echo "⚠️  Binary is ${BINARY_AGE}s old — xcodebuild may have used stale cache"
+    echo "    Run: rm -rf $BUILD_DIR && bash build.sh"
+    echo "    Continuing anyway..."
 fi
 
 echo "==> Installing to /Applications/RuWisper.app..."
