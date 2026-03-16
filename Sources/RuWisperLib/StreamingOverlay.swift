@@ -120,9 +120,12 @@ class StreamingOverlay: NSPanel {
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.2
             self.animator().alphaValue = 0
-        }, completionHandler: {
+        }, completionHandler: { [weak self] in
+            guard let self else { return }
             self.orderOut(nil)
-            self.state.isLocked = false
+            Task { @MainActor in
+                self.state.isLocked = false
+            }
         })
     }
 
