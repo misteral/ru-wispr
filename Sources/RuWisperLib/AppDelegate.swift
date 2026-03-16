@@ -61,7 +61,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         if config.effectiveEngine == "gigaam" {
             if !GigaAMTranscriber.isAvailable(path: config.gigaamPath) {
-                print("Error: GigaAM model not found. Set 'gigaamPath' in config (path to gigaam-v3-ctc-mlx directory).")
+                print("Error: GigaAM model not found. Set 'gigaamPath' in config or place model in app bundle.")
                 return
             }
             // Pre-load model for fast first transcription and streaming

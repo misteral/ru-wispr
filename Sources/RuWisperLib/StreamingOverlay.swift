@@ -134,13 +134,16 @@ class StreamingOverlay: NSPanel {
     }
 
     private func centerOnScreen() {
-        if let screen = NSScreen.main {
-            let fullFrame = screen.frame
-            let visibleFrame = screen.visibleFrame
-            // Place just below the menu bar (top of visibleFrame), with a small gap
-            let x = fullFrame.origin.x + (fullFrame.width - pillWidth) / 2
-            let y = visibleFrame.maxY - pillHeight - 8
-            setFrame(NSRect(x: x, y: y, width: pillWidth, height: pillHeight), display: true)
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+            NSLog("[OW] StreamingOverlay: no screen found")
+            return
         }
+        let fullFrame = screen.frame
+        let visibleFrame = screen.visibleFrame
+        // Place just below the menu bar (top of visibleFrame), with a small gap
+        let x = fullFrame.origin.x + (fullFrame.width - pillWidth) / 2
+        let y = visibleFrame.maxY - pillHeight - 8
+        NSLog("[OW] StreamingOverlay position: x=%.0f y=%.0f (visibleFrame.maxY=%.0f)", x, y, visibleFrame.maxY)
+        setFrame(NSRect(x: x, y: y, width: pillWidth, height: pillHeight), display: true)
     }
 }
