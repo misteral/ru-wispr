@@ -13,6 +13,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var streamingTimer: Timer?
     private var lastStreamingText: String = ""
     private var streamingInsertedText: String = ""
+    private var streamingContext = StreamingContext()
     var config: Config!
     var overlay: StreamingOverlay!
     var isPressed = false
@@ -252,6 +253,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 self.streamingBuffer = []
                 self.lastStreamingText = ""
                 self.streamingInsertedText = ""
+                self.streamingContext.reset()
                 self.recorder.onAudioSamples = { [weak self] samples in
                     self?.streamingBuffer.append(contentsOf: samples)
                     
@@ -366,20 +368,20 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 if self.config.effectiveEngine == "gigaam" {
                     let bufferCount = self.streamingBuffer.count
                     let wasStreaming = self.config.effectiveStreaming && !self.lastStreamingText.isEmpty
-                    let maxStreamWindow = 30 * 16000  // 30s at 16kHz — same cap as transcribeLive
 
-                    if wasStreaming && bufferCount <= maxStreamWindow {
-                        // Short recording with streaming — reuse already-computed result
-                        NSLog("[OW] Reusing streaming result (%d samples ≤ %d window)", bufferCount, maxStreamWindow)
-                        raw = self.lastStreamingText
+                    if wasStreaming {
+                        // Windowed streaming — only process the uncommitted tail
+                        NSLog("[OW] Final transcribe on tail (%d total samples, %d committed)", bufferCount, self.streamingContext.committedSamples)
+                        raw = try self.gigaamTranscriber.transcribeFinal(samples: self.streamingBuffer, context: self.streamingContext)
                     } else if bufferCount > 4800 {
-                        // Long recording or no streaming — chunked transcription
+                        // No streaming — chunked transcription
                         NSLog("[OW] Chunked transcribe on %d samples...", bufferCount)
                         raw = try self.gigaamTranscriber.transcribeChunked(samples: self.streamingBuffer)
                     } else {
                         raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
                     }
                     self.streamingBuffer = []
+                    self.streamingContext.reset()
                 } else {
                     NSLog("[OW] Calling whisper transcribe...")
                     raw = try await self.transcriber.transcribe(audioURL: audioURL)
@@ -444,11 +446,14 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private func performStreamingTranscription() {
         let buffer = streamingBuffer
         guard (isPressed || isLocked), buffer.count > 8000 else { return }  // at least 0.5s and still recording
+        guard !streamingContext.isProcessing else { return }  // skip if previous call still running
 
+        streamingContext.isProcessing = true
         Task { [weak self] in
             guard let self = self else { return }
+            defer { self.streamingContext.isProcessing = false }
             do {
-                let result = try self.gigaamTranscriber.transcribeLive(samples: buffer)
+                let result = try self.gigaamTranscriber.transcribeLive(samples: buffer, context: self.streamingContext)
                 let currentText = result.cumulativeText
 
                 if !currentText.isEmpty && currentText != self.lastStreamingText {

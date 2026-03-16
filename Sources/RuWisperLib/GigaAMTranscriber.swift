@@ -9,12 +9,44 @@ public struct StreamingResult {
     public let cumulativeText: String
 }
 
+/// Maintains state for windowed streaming transcription.
+/// Tracks committed (finalized) text from older audio and the active window text.
+public class StreamingContext {
+    /// Finalized text from committed (older) audio chunks.
+    var committedText: String = ""
+    /// Number of audio samples whose transcription has been committed.
+    var committedSamples: Int = 0
+    /// Text from the most recent active window (may change on next tick).
+    var lastWindowText: String = ""
+    /// Guard against concurrent transcription calls.
+    var isProcessing: Bool = false
+
+    /// Full cumulative text = committed + window.
+    var fullText: String {
+        if committedText.isEmpty { return lastWindowText }
+        if lastWindowText.isEmpty { return committedText }
+        return committedText + " " + lastWindowText
+    }
+
+    func reset() {
+        committedText = ""
+        committedSamples = 0
+        lastWindowText = ""
+        isProcessing = false
+    }
+}
+
 /// Native GigaAM v3 transcriber using MLX Swift — no Python dependency.
 /// Supports both CTC and RNNT models (auto-detected from config.json).
 public class GigaAMTranscriber {
     private var model: (any GigaAMModelProtocol)?
     private let modelDir: URL
     private var isLoaded = false
+
+    // Windowed streaming configuration (seconds)
+    private static let windowSeconds = 5
+    private static let overlapSeconds = 1
+    private static let commitThresholdSeconds = 8
 
     /// Default model directory (search order):
     /// 1. App bundle: Contents/Resources/gigaam-v3-rnnt-mlx/
@@ -118,31 +150,133 @@ public class GigaAMTranscriber {
         return results.joined(separator: " ")
     }
 
-    /// Transcribe a growing audio buffer for live streaming.
-    /// Call repeatedly as new audio arrives.
-    /// Returns current full transcription.
-    public func transcribeLive(samples: [Float]) throws -> StreamingResult {
+    /// Windowed streaming transcription: processes only the recent audio window
+    /// and commits older audio progressively. Each call does at most one model
+    /// inference (~5-8s of audio) instead of re-processing the entire buffer.
+    public func transcribeLive(samples: [Float], context: StreamingContext) throws -> StreamingResult {
         try loadModel()
         guard let model = model else {
             throw GigaAMError.modelNotLoaded
         }
 
         let sr = model.config.sampleRate
-        let maxWindow = 30 * sr  // cap at 30 seconds
+        let windowSize = Self.windowSeconds * sr
+        let overlapSize = Self.overlapSeconds * sr
+        let commitThreshold = Self.commitThresholdSeconds * sr
         let totalSamples = samples.count
 
-        let startIdx = max(0, totalSamples - maxWindow)
-        let window = Array(samples[startIdx...])
-        let audio = MLXArray(window)
+        // Short recording: process everything (no windowing needed)
+        if totalSamples <= windowSize {
+            let text = model.transcribe(MLXArray(samples))
+            context.lastWindowText = text
+            return StreamingResult(
+                text: context.fullText, isFinal: false,
+                audioPosition: Double(totalSamples) / Double(sr),
+                cumulativeText: context.fullText
+            )
+        }
 
-        let text = model.transcribe(audio)
+        // Check if uncommitted audio exceeds the threshold — commit older audio
+        let uncommitted = totalSamples - context.committedSamples
+        if uncommitted > commitThreshold {
+            let commitEnd = totalSamples - windowSize
+            if commitEnd > context.committedSamples {
+                let chunk = Array(samples[context.committedSamples..<commitEnd])
+                let chunkText = model.transcribe(MLXArray(chunk))
+                if !chunkText.isEmpty {
+                    context.committedText = context.committedText.isEmpty
+                        ? chunkText
+                        : context.committedText + " " + chunkText
+                }
+                context.committedSamples = commitEnd
+                // Return current result without re-processing window this tick
+                return StreamingResult(
+                    text: context.fullText, isFinal: false,
+                    audioPosition: Double(totalSamples) / Double(sr),
+                    cumulativeText: context.fullText
+                )
+            }
+        }
+
+        // Process active window with overlap into committed region for stitching
+        let windowStart = max(context.committedSamples - overlapSize, 0)
+        let windowSamples = Array(samples[windowStart...])
+        let windowText = model.transcribe(MLXArray(windowSamples))
+
+        // Stitch: remove overlap text that duplicates committed text
+        if context.committedSamples > 0 && windowStart < context.committedSamples && !context.committedText.isEmpty {
+            context.lastWindowText = Self.stitchTexts(committed: context.committedText, window: windowText)
+        } else {
+            context.lastWindowText = windowText
+        }
 
         return StreamingResult(
-            text: text,
-            isFinal: false,
+            text: context.fullText, isFinal: false,
             audioPosition: Double(totalSamples) / Double(sr),
-            cumulativeText: text
+            cumulativeText: context.fullText
         )
+    }
+
+    /// Final transcription when recording stops. Only processes the uncommitted
+    /// tail (at most ~8s) for near-instant results.
+    public func transcribeFinal(samples: [Float], context: StreamingContext) throws -> String {
+        try loadModel()
+        guard let model = model else {
+            throw GigaAMError.modelNotLoaded
+        }
+
+        guard context.committedSamples < samples.count else {
+            return context.committedText
+        }
+
+        let sr = model.config.sampleRate
+        let overlapSize = Self.overlapSeconds * sr
+
+        // Process remaining samples with overlap into committed region
+        let tailStart = max(context.committedSamples - overlapSize, 0)
+        let tail = Array(samples[tailStart...])
+        let tailText = model.transcribe(MLXArray(tail))
+
+        if context.committedText.isEmpty {
+            return tailText
+        }
+        if tailText.isEmpty {
+            return context.committedText
+        }
+
+        // Stitch tail with committed text
+        if tailStart < context.committedSamples {
+            let newPart = Self.stitchTexts(committed: context.committedText, window: tailText)
+            return newPart.isEmpty ? context.committedText : context.committedText + " " + newPart
+        }
+
+        return context.committedText + " " + tailText
+    }
+
+    /// Find new text in window that doesn't overlap with committed text.
+    /// Uses word-level suffix-prefix matching to remove duplicated overlap.
+    static func stitchTexts(committed: String, window: String) -> String {
+        let committedWords = committed.split(separator: " ").map(String.init)
+        let windowWords = window.split(separator: " ").map(String.init)
+
+        guard !committedWords.isEmpty, !windowWords.isEmpty else {
+            return window
+        }
+
+        // Find longest suffix of committed that matches a prefix of window
+        let maxOverlap = min(committedWords.count, windowWords.count, 15)
+
+        for overlapLen in stride(from: maxOverlap, through: 1, by: -1) {
+            let suffix = Array(committedWords.suffix(overlapLen))
+            let prefix = Array(windowWords.prefix(overlapLen))
+            if suffix == prefix {
+                let newWords = windowWords.dropFirst(overlapLen)
+                return newWords.joined(separator: " ")
+            }
+        }
+
+        // No overlap found — return full window text
+        return window
     }
 
     /// Check if the model directory exists and contains required files.
