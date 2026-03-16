@@ -16,9 +16,17 @@ public class GigaAMTranscriber {
     private let modelDir: URL
     private var isLoaded = false
 
-    /// Default model directory: ~/.config/ru-wisper/models/gigaam-v3-rnnt-mlx
+    /// Default model directory (search order):
+    /// 1. App bundle: Contents/Resources/gigaam-v3-rnnt-mlx/
+    /// 2. User config: ~/.config/ru-wisper/models/gigaam-v3-rnnt-mlx/
     public static let defaultModelDir: URL = {
-        Config.configDir.appending(path: "models/gigaam-v3-rnnt-mlx")
+        // Check app bundle first (shipped model)
+        if let bundled = Bundle.main.resourceURL?.appending(path: "gigaam-v3-rnnt-mlx"),
+           FileManager.default.fileExists(atPath: bundled.appending(path: "config.json").path) {
+            return bundled
+        }
+        // Fallback to user config directory
+        return Config.configDir.appending(path: "models/gigaam-v3-rnnt-mlx")
     }()
 
     public init(modelPath: String? = nil) {

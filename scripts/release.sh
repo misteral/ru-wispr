@@ -73,6 +73,18 @@ if [ -d "Resources/Audio" ]; then
     cp -R "Resources/Audio" "$APP_DIR/Contents/Resources/Audio"
 fi
 
+# GigaAM RNNT model — bundle for distribution
+GIGAAM_MODEL="${GIGAAM_MODEL:-$HOME/.config/ru-wisper/models/gigaam-v3-rnnt-mlx}"
+if [ -f "$GIGAAM_MODEL/config.json" ] && [ -f "$GIGAAM_MODEL/model.safetensors" ]; then
+    step "Bundling GigaAM RNNT model..."
+    cp -R "$GIGAAM_MODEL" "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
+    echo "Model: $GIGAAM_MODEL"
+    du -sh "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
+else
+    warn "GigaAM RNNT model not found at $GIGAAM_MODEL"
+    echo "    Set GIGAAM_MODEL=/path/to/gigaam-v3-rnnt-mlx to bundle it"
+fi
+
 # Info.plist
 cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
