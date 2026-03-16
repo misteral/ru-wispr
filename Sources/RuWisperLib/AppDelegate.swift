@@ -316,14 +316,20 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         // Stop streaming transcription timer
         stopStreamingTranscription()
         recorder.onAudioSamples = nil
+
+        // Keep overlay visible — switch to processing state
+        let hadOverlay = overlay.alphaValue > 0
         Task { @MainActor in
             self.overlay.setLocked(false)
-            self.overlay.hide()
+            if hadOverlay {
+                self.overlay.showProcessing()
+            }
         }
 
         guard let audioURL = recorder.stopRecording() else {
             NSLog("[OW] stopRecording returned nil (short press, no recording)")
             statusBar.state = .idle
+            Task { @MainActor in self.overlay.hide() }
             return
         }
 
@@ -338,6 +344,14 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusBar.state = .transcribing
         NSLog("[OW] Starting transcription with engine: %@", config.effectiveEngine)
+
+        // If overlay wasn't shown (non-streaming engine), show it now for processing state
+        if !hadOverlay {
+            Task { @MainActor in
+                self.overlay.show()
+                self.overlay.showProcessing()
+            }
+        }
 
         Task { [weak self] in
             guard let self = self else { return }
@@ -374,11 +388,21 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                         self.lastTranscription = text
                         self.inserter.insert(text: text)
                         NSLog("[OW] Text inserted OK")
+                        // Show green checkmark with the final text
+                        self.overlay.showDone(text: text)
                     } else {
                         NSLog("[OW] Text is empty, skipping insert")
+                        self.overlay.hide()
                     }
                     self.statusBar.state = .idle
                     self.statusBar.buildMenu()
+                }
+                // Auto-hide overlay after showing done state
+                if !text.isEmpty {
+                    try? await Task.sleep(for: .seconds(1.5))
+                    await MainActor.run {
+                        self.overlay.hide()
+                    }
                 }
             } catch {
                 NSLog("[OW] Transcription error: %@", error.localizedDescription)
@@ -387,6 +411,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 await MainActor.run {
                     print("Error: \(error.localizedDescription)")
+                    self.overlay.hide()
                     self.statusBar.state = .idle
                     self.statusBar.buildMenu()
                 }

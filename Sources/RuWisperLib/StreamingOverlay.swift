@@ -1,5 +1,13 @@
 import SwiftUI
 
+// MARK: - Overlay Phase
+
+enum OverlayPhase: Equatable {
+    case recording
+    case processing
+    case done
+}
+
 // MARK: - Observable State
 
 @MainActor
@@ -7,6 +15,7 @@ import SwiftUI
 final class StreamingOverlayState {
     var text = ""
     var isLocked = false
+    var phase: OverlayPhase = .recording
     let audio = AudioLevelHistory(capacity: 64)
 }
 
@@ -15,15 +24,36 @@ final class StreamingOverlayState {
 struct StreamingOverlayContent: View {
     var state: StreamingOverlayState
 
+    private var borderOpacity: Double {
+        switch state.phase {
+        case .recording: state.isLocked ? 0.30 : 0.22
+        case .processing: 0.25
+        case .done: 0.35
+        }
+    }
+
     var body: some View {
         HStack(spacing: 0) {
-            RecordingIndicator(audioLevel: state.audio.currentLevel)
-                .frame(width: 44, height: 44)
-                .padding(.leading, 12)
+            switch state.phase {
+            case .recording:
+                RecordingIndicator(audioLevel: state.audio.currentLevel)
+                    .frame(width: 44, height: 44)
+                    .padding(.leading, 12)
 
-            WaveformCanvas(levels: state.audio.levels, offset: state.audio.offset)
-                .frame(width: 120, height: 24)
-                .padding(.leading, 10)
+                WaveformCanvas(levels: state.audio.levels, offset: state.audio.offset)
+                    .frame(width: 120, height: 24)
+                    .padding(.leading, 10)
+
+            case .processing:
+                ProcessingIndicator()
+                    .frame(width: 44, height: 44)
+                    .padding(.leading, 12)
+
+            case .done:
+                DoneIndicator()
+                    .frame(width: 44, height: 44)
+                    .padding(.leading, 12)
+            }
 
             Text(state.text)
                 .font(.body.weight(.light))
@@ -31,13 +61,13 @@ struct StreamingOverlayContent: View {
                 .lineLimit(1)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 18)
+                .padding(.leading, state.phase == .recording ? 18 : 12)
                 .padding(.trailing, 24)
         }
         .frame(width: 560, height: 56)
         .background {
             ZStack {
-                // Solid dark base — slightly lighter gray per design ref
+                // Solid dark base
                 RoundedRectangle(cornerRadius: 28)
                     .fill(Color(white: 0.22).opacity(0.94))
 
@@ -45,19 +75,102 @@ struct StreamingOverlayContent: View {
                 RoundedRectangle(cornerRadius: 28)
                     .fill(.ultraThinMaterial.opacity(0.25))
 
-                // Visible border stroke matching the design reference
+                // Visible border stroke
                 RoundedRectangle(cornerRadius: 28)
                     .strokeBorder(
-                        .white.opacity(state.isLocked ? 0.30 : 0.22),
+                        .white.opacity(borderOpacity),
                         lineWidth: 1.0
                     )
             }
         }
         .clipShape(.rect(cornerRadius: 28))
+        .animation(.easeInOut(duration: 0.35), value: state.phase)
         .animation(.easeInOut(duration: 0.4), value: state.isLocked)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(L10n.recordingAccessibility(state.text))
+    }
+}
+
+// MARK: - Processing Indicator (spinning arc)
+
+struct ProcessingIndicator: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        ZStack {
+            // Gray circular background (matching RecordingIndicator style)
+            Circle()
+                .fill(Color(white: 0.40))
+                .frame(width: 38, height: 38)
+
+            Circle()
+                .strokeBorder(Color.black.opacity(0.35), lineWidth: 1.0)
+                .frame(width: 38, height: 38)
+
+            // Spinning arc
+            Circle()
+                .trim(from: 0, to: 0.65)
+                .stroke(
+                    AngularGradient(
+                        colors: [.white.opacity(0.0), .white.opacity(0.85)],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: 2.0, lineCap: .round)
+                )
+                .frame(width: 18, height: 18)
+                .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                .animation(
+                    .linear(duration: 0.9).repeatForever(autoreverses: false),
+                    value: isAnimating
+                )
+        }
+        .onAppear { isAnimating = true }
+    }
+}
+
+// MARK: - Done Indicator (green checkmark)
+
+struct DoneIndicator: View {
+    @State private var scale: Double = 0.5
+    @State private var opacity: Double = 0.0
+
+    var body: some View {
+        ZStack {
+            // Green glow
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color.green.opacity(0.25), .clear],
+                        center: .center,
+                        startRadius: 8,
+                        endRadius: 24
+                    )
+                )
+                .frame(width: 44, height: 44)
+
+            // Green circular background
+            Circle()
+                .fill(Color.green.opacity(0.85))
+                .frame(width: 38, height: 38)
+
+            Circle()
+                .strokeBorder(Color.green.opacity(0.3), lineWidth: 1.0)
+                .frame(width: 38, height: 38)
+
+            // Checkmark
+            Image(systemName: "checkmark")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .scaleEffect(scale)
+        .opacity(opacity)
+        .onAppear {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                scale = 1.0
+                opacity = 1.0
+            }
+        }
     }
 }
 
@@ -100,6 +213,7 @@ class StreamingOverlay: NSPanel {
     func show() {
         centerOnScreen()
         state.text = ""
+        state.phase = .recording
         state.audio.reset()
 
         orderFront(nil)
@@ -116,6 +230,20 @@ class StreamingOverlay: NSPanel {
         }
     }
 
+    func showProcessing() {
+        Task { @MainActor in
+            self.state.phase = .processing
+            self.state.text = L10n.processing
+        }
+    }
+
+    func showDone(text: String) {
+        Task { @MainActor in
+            self.state.phase = .done
+            self.state.text = text
+        }
+    }
+
     func hide() {
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.2
@@ -125,6 +253,7 @@ class StreamingOverlay: NSPanel {
             self.orderOut(nil)
             Task { @MainActor in
                 self.state.isLocked = false
+                self.state.phase = .recording
             }
         })
     }

@@ -39,6 +39,8 @@ enum L10n {
 
     // MARK: - Overlay / accessibility
 
+    static var processing: String { isRussian ? "Обработка..." : "Processing..." }
+
     static func recordingAccessibility(_ text: String) -> String {
         isRussian ? "Запись: \(text)" : "Recording: \(text)"
     }
