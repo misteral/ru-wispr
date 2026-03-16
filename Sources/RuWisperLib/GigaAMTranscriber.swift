@@ -82,6 +82,42 @@ public class GigaAMTranscriber {
         return model.transcribe(audio)
     }
 
+    /// Transcribe raw audio samples in 30-second chunks for long recordings.
+    /// Avoids heavy single-pass processing — consistent with streaming window size.
+    public func transcribeChunked(samples: [Float], chunkSeconds: Int = 30) throws -> String {
+        try loadModel()
+        guard let model = model else {
+            throw GigaAMError.modelNotLoaded
+        }
+
+        let sr = model.config.sampleRate
+        let chunkSize = chunkSeconds * sr
+
+        // Short recording — single pass
+        if samples.count <= chunkSize {
+            let audio = MLXArray(samples)
+            return model.transcribe(audio)
+        }
+
+        // Long recording — split into chunks
+        var results: [String] = []
+        var offset = 0
+        while offset < samples.count {
+            let end = min(offset + chunkSize, samples.count)
+            let chunk = Array(samples[offset..<end])
+            // Skip very short trailing chunks (< 0.5s)
+            guard chunk.count >= sr / 2 else { break }
+            let audio = MLXArray(chunk)
+            let text = model.transcribe(audio)
+            if !text.isEmpty {
+                results.append(text)
+            }
+            offset = end
+        }
+
+        return results.joined(separator: " ")
+    }
+
     /// Transcribe a growing audio buffer for live streaming.
     /// Call repeatedly as new audio arrives.
     /// Returns current full transcription.

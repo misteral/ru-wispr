@@ -364,10 +364,18 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let raw: String
                 if self.config.effectiveEngine == "gigaam" {
-                    // For GigaAM, do final transcription from the accumulated buffer
-                    NSLog("[OW] Calling gigaam final transcribe on %d samples...", self.streamingBuffer.count)
-                    if self.streamingBuffer.count > 4800 {
-                        raw = try self.gigaamTranscriber.transcribe(samples: self.streamingBuffer)
+                    let bufferCount = self.streamingBuffer.count
+                    let wasStreaming = self.config.effectiveStreaming && !self.lastStreamingText.isEmpty
+                    let maxStreamWindow = 30 * 16000  // 30s at 16kHz — same cap as transcribeLive
+
+                    if wasStreaming && bufferCount <= maxStreamWindow {
+                        // Short recording with streaming — reuse already-computed result
+                        NSLog("[OW] Reusing streaming result (%d samples ≤ %d window)", bufferCount, maxStreamWindow)
+                        raw = self.lastStreamingText
+                    } else if bufferCount > 4800 {
+                        // Long recording or no streaming — chunked transcription
+                        NSLog("[OW] Chunked transcribe on %d samples...", bufferCount)
+                        raw = try self.gigaamTranscriber.transcribeChunked(samples: self.streamingBuffer)
                     } else {
                         raw = try self.gigaamTranscriber.transcribe(audioURL: audioURL)
                     }
