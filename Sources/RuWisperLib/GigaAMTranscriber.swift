@@ -10,14 +10,15 @@ public struct StreamingResult {
 }
 
 /// Native GigaAM v3 transcriber using MLX Swift — no Python dependency.
+/// Supports both CTC and RNNT models (auto-detected from config.json).
 public class GigaAMTranscriber {
-    private var model: GigaAMCTCModel?
+    private var model: (any GigaAMModelProtocol)?
     private let modelDir: URL
     private var isLoaded = false
 
-    /// Default model directory: ~/.config/ru-wisper/models/gigaam-v3-ctc-mlx
+    /// Default model directory: ~/.config/ru-wisper/models/gigaam-v3-rnnt-mlx
     public static let defaultModelDir: URL = {
-        Config.configDir.appending(path: "models/gigaam-v3-ctc-mlx")
+        Config.configDir.appending(path: "models/gigaam-v3-rnnt-mlx")
     }()
 
     public init(modelPath: String? = nil) {
@@ -34,7 +35,8 @@ public class GigaAMTranscriber {
         let t0 = CFAbsoluteTimeGetCurrent()
         model = try loadGigaAMModel(from: modelDir)
         let dt = CFAbsoluteTimeGetCurrent() - t0
-        fputs("GigaAM: model loaded in \(dt.formatted(.number.precision(.fractionLength(2))))s\n", stderr)
+        let headType = model?.config.headType ?? "unknown"
+        fputs("GigaAM: \(headType.uppercased()) model loaded in \(dt.formatted(.number.precision(.fractionLength(2))))s\n", stderr)
         isLoaded = true
     }
 

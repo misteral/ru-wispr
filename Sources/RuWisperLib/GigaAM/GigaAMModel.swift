@@ -282,9 +282,109 @@ class CTCHead: Module {
     }
 }
 
-// MARK: - Full GigaAM CTC Model
+// MARK: - RNNT Decoder (Prediction Network)
 
-class GigaAMCTCModel: Module {
+/// RNNT prediction network: Embedding → LSTM.
+/// Weight keys: head.decoder.embed.weight, head.decoder.lstm.{Wx,Wh,bias}
+class RNNTDecoder: Module {
+    let embed: Embedding
+    let lstm: LSTM
+    let predHidden: Int
+    let blankId: Int
+
+    init(numClasses: Int, predHidden: Int) {
+        self.predHidden = predHidden
+        self.blankId = numClasses - 1
+        self.embed = Embedding(embeddingCount: numClasses, dimensions: predHidden)
+        self.lstm = LSTM(inputSize: predHidden, hiddenSize: predHidden)
+    }
+
+    /// Run one step of the prediction network.
+    /// - Parameters:
+    ///   - label: Previous label index, or nil for initial step (uses zero embedding).
+    ///   - state: (hidden, cell) each [1, predHidden], or nil for initial.
+    /// - Returns: (output [1, 1, predHidden], newState)
+    func predict(label: Int?, state: (MLXArray, MLXArray)?) -> (MLXArray, (MLXArray, MLXArray)) {
+        let emb: MLXArray
+        if let label = label {
+            // [1, 1] → embed → [1, 1, predHidden]
+            emb = embed(MLXArray([Int32(label)]).reshaped(1, 1))
+        } else {
+            emb = MLXArray.zeros([1, 1, predHidden])
+        }
+
+        // MLX LSTM returns (allHidden, allCell), each [B, T, H]
+        let (hiddenStates, cellStates): (MLXArray, MLXArray)
+        if let (h, c) = state {
+            (hiddenStates, cellStates) = lstm(emb, hidden: h, cell: c)
+        } else {
+            (hiddenStates, cellStates) = lstm(emb)
+        }
+
+        let output = hiddenStates  // [1, 1, predHidden]
+        // Last timestep for new state: [1, H]
+        let T = hiddenStates.dim(1)
+        let newH = hiddenStates[0..<1, (T - 1)..<T].squeezed(axis: 1)  // [1, H]
+        let newC = cellStates[0..<1, (T - 1)..<T].squeezed(axis: 1)    // [1, H]
+
+        return (output, (newH, newC))
+    }
+}
+
+// MARK: - RNNT Joint Network
+
+/// Joint network: enc_proj + pred_proj → ReLU → output.
+/// Weight keys: head.joint.{enc,pred,joint_net_linear}.{weight,bias}
+class RNNTJoint: Module {
+    let enc: Linear
+    let pred: Linear
+    @ModuleInfo(key: "joint_net_linear") var jointNetLinear: Linear
+
+    init(encHidden: Int, predHidden: Int, jointHidden: Int, numClasses: Int) {
+        self.enc = Linear(encHidden, jointHidden)
+        self.pred = Linear(predHidden, jointHidden)
+        self._jointNetLinear.wrappedValue = Linear(jointHidden, numClasses)
+    }
+
+    /// - Parameters:
+    ///   - encoderOut: [B, T, encHidden] or [B, 1, encHidden]
+    ///   - decoderOut: [B, U, predHidden] or [B, 1, predHidden]
+    /// - Returns: logits [B, T, U, numClasses]
+    func callAsFunction(_ encoderOut: MLXArray, decoderOut: MLXArray) -> MLXArray {
+        let encProj = expandedDimensions(enc(encoderOut), axis: 2)   // [B, T, 1, J]
+        let predProj = expandedDimensions(pred(decoderOut), axis: 1) // [B, 1, U, J]
+        let joint = maximum(encProj + predProj, MLXArray(Float(0)))  // ReLU
+        return jointNetLinear(joint)  // [B, T, U, C]
+    }
+}
+
+// MARK: - RNNT Head
+
+/// Combines decoder (prediction network) and joint network.
+class RNNTHead: Module {
+    let decoder: RNNTDecoder
+    let joint: RNNTJoint
+
+    init(encHidden: Int, predHidden: Int, jointHidden: Int, numClasses: Int) {
+        self.decoder = RNNTDecoder(numClasses: numClasses, predHidden: predHidden)
+        self.joint = RNNTJoint(encHidden: encHidden, predHidden: predHidden,
+                               jointHidden: jointHidden, numClasses: numClasses)
+    }
+}
+
+// MARK: - Full GigaAM Model (CTC or RNNT)
+
+/// Protocol for a GigaAM model that can transcribe audio.
+protocol GigaAMModelProtocol {
+    var config: GigaAMConfig { get }
+    func transcribe(_ audio: MLXArray) -> String
+
+    // Preprocessing arrays
+    var melFilterbank: MLXArray? { get set }
+    var stftWindow: MLXArray? { get set }
+}
+
+class GigaAMCTCModel: Module, GigaAMModelProtocol {
     let encoder: ConformerEncoder
     let head: CTCHead
     let config: GigaAMConfig
@@ -423,12 +523,190 @@ class GigaAMCTCModel: Module {
     }
 }
 
+// MARK: - GigaAM RNNT Model
+
+class GigaAMRNNTModel: Module, GigaAMModelProtocol {
+    let encoder: ConformerEncoder
+    let head: RNNTHead
+    let config: GigaAMConfig
+
+    var melFilterbank: MLXArray?
+    var stftWindow: MLXArray?
+
+    /// Maximum symbols to emit per encoder frame (prevents infinite loop).
+    private let maxSymbolsPerStep = 10
+
+    init(_ cfg: GigaAMConfig) {
+        self.config = cfg
+        self.encoder = ConformerEncoder(cfg)
+        self.head = RNNTHead(
+            encHidden: cfg.dModel,
+            predHidden: cfg.rnntPredHidden,
+            jointHidden: cfg.rnntJointHidden,
+            numClasses: cfg.numClasses
+        )
+    }
+
+    /// Encode audio features → (encoded, lengths).
+    func encode(_ features: MLXArray, lengths: MLXArray) -> (MLXArray, MLXArray) {
+        return encoder(features, lengths: lengths)
+    }
+
+    // MARK: - Audio Preprocessing (shared with CTC)
+
+    func computeFeatures(_ audio: MLXArray) -> (MLXArray, MLXArray) {
+        let mel = logMelSpectrogram(audio)
+        let melBatched = expandedDimensions(mel, axis: 0)
+        let lengths = MLXArray([Int32(mel.dim(0))])
+        return (melBatched, lengths)
+    }
+
+    private func logMelSpectrogram(_ audio: MLXArray) -> MLXArray {
+        let window = stftWindow ?? hanningWindow(config.winLength)
+        let spec = stft(audio, window: window)
+        let power = spec.abs().square()
+        let filters = melFilterbank ?? buildMelFilters()
+        let mel = power.matmul(filters)
+        return MLX.log(clip(mel, min: 1e-9, max: 1e9))
+    }
+
+    private func stft(_ signal: MLXArray, window: MLXArray) -> MLXArray {
+        let winLen = config.winLength
+        let hop = config.hopLength
+        let nFFT = config.nFFT
+        let length = signal.dim(-1)
+        let nFrames = 1 + (length - winLen) / hop
+
+        let frameOffsets = MLXArray.arange(nFrames) * Int32(hop)
+        let winIndices = MLXArray.arange(winLen)
+        let indices = expandedDimensions(frameOffsets, axis: 1) + expandedDimensions(winIndices, axis: 0)
+
+        var frames = signal.take(indices.flattened(), axis: 0).reshaped(nFrames, winLen) * window
+
+        if winLen < nFFT {
+            frames = padded(frames, widths: [.init((0, 0)), .init((0, nFFT - winLen))])
+        }
+
+        return MLXFFT.rfft(frames, axis: -1)
+    }
+
+    private func hanningWindow(_ size: Int) -> MLXArray {
+        let n = MLXArray.arange(size).asType(.float32)
+        return 0.5 - 0.5 * MLX.cos(2.0 * Float.pi * n / Float(size))
+    }
+
+    private func buildMelFilters() -> MLXArray {
+        let sr = Float(config.sampleRate)
+        let nFFT = config.nFFT
+        let nMels = config.features
+
+        func hzToMel(_ f: Float) -> Float { 2595.0 * log10(1.0 + f / 700.0) }
+        func melToHz(_ m: Float) -> Float { 700.0 * (pow(10.0, m / 2595.0) - 1.0) }
+
+        let melMin = hzToMel(0)
+        let melMax = hzToMel(sr / 2)
+
+        var melPoints = [Float]()
+        for i in 0 ..< nMels + 2 {
+            melPoints.append(melMin + Float(i) * (melMax - melMin) / Float(nMels + 1))
+        }
+        let hzPoints = melPoints.map { melToHz($0) }
+        let bins = hzPoints.map { Int(floor(Float(nFFT + 1) * $0 / sr)) }
+
+        var fb = [[Float]](repeating: [Float](repeating: 0, count: nMels), count: nFFT / 2 + 1)
+        for i in 0 ..< nMels {
+            let lo = bins[i], mid = bins[i + 1], hi = bins[i + 2]
+            for k in lo ..< mid where mid != lo {
+                fb[k][i] = Float(k - lo) / Float(mid - lo)
+            }
+            for k in mid ..< hi where hi != mid {
+                fb[k][i] = Float(hi - k) / Float(hi - mid)
+            }
+        }
+
+        return MLXArray(fb.flatMap { $0 }, [nFFT / 2 + 1, nMels])
+    }
+
+    // MARK: - RNNT Greedy Decoding
+
+    /// Greedy RNNT decode: for each encoder timestep, run decoder until blank.
+    func rnntDecode(_ encoded: MLXArray, encLength: Int) -> String {
+        let vocab = config.vocabulary
+        let blankId = vocab.count  // blank = last class
+
+        var hyp: [Int] = []
+        var decState: (MLXArray, MLXArray)? = nil
+        var lastLabel: Int? = nil
+
+        for t in 0 ..< encLength {
+            // Encoder frame: [1, 1, D]
+            let f = encoded[t..<(t + 1)].reshaped(1, 1, -1)
+
+            var notBlank = true
+            var newSymbols = 0
+
+            while notBlank && newSymbols < maxSymbolsPerStep {
+                let (g, hidden) = head.decoder.predict(label: lastLabel, state: decState)
+                // g: [1, 1, predHidden]
+
+                let logits = head.joint(f, decoderOut: g)  // [1, 1, 1, C]
+                eval(logits)
+
+                let k = logits[0, 0, 0].argMax().item(Int.self)
+
+                if k == blankId {
+                    notBlank = false
+                } else {
+                    hyp.append(k)
+                    decState = hidden
+                    lastLabel = k
+                    newSymbols += 1
+                }
+            }
+        }
+
+        return hyp.map { idx in
+            idx < vocab.count ? vocab[idx] : ""
+        }.joined()
+    }
+
+    // MARK: - Transcribe
+
+    func transcribe(_ audio: MLXArray) -> String {
+        let (mel, lengths) = computeFeatures(audio)
+        let (encoded, encLengths) = encode(mel, lengths: lengths)
+        eval(encoded, encLengths)
+        return rnntDecode(encoded[0], encLength: encLengths[0].item(Int.self))
+    }
+}
+
 // MARK: - Model Loading
 
-func loadGigaAMModel(from directory: URL) throws -> GigaAMCTCModel {
+/// Load GigaAM model (CTC or RNNT) from a directory.
+/// Automatically detects head type from config.json.
+func loadGigaAMModel(from directory: URL) throws -> any GigaAMModelProtocol {
     let cfg = try GigaAMConfig.load(from: directory)
-    let model = GigaAMCTCModel(cfg)
 
+    if cfg.isRNNT {
+        return try loadGigaAMRNNTModel(cfg: cfg, from: directory)
+    } else {
+        return try loadGigaAMCTCModel(cfg: cfg, from: directory)
+    }
+}
+
+private func loadGigaAMCTCModel(cfg: GigaAMConfig, from directory: URL) throws -> GigaAMCTCModel {
+    let model = GigaAMCTCModel(cfg)
+    try loadWeights(into: model, from: directory)
+    return model
+}
+
+private func loadGigaAMRNNTModel(cfg: GigaAMConfig, from directory: URL) throws -> GigaAMRNNTModel {
+    let model = GigaAMRNNTModel(cfg)
+    try loadWeights(into: model, from: directory)
+    return model
+}
+
+private func loadWeights(into model: Module & GigaAMModelProtocol, from directory: URL) throws {
     let weightsURL = directory.appendingPathComponent("model.safetensors")
     var weights = try loadArrays(url: weightsURL)
 
@@ -436,11 +714,12 @@ func loadGigaAMModel(from directory: URL) throws -> GigaAMCTCModel {
     let melFB = weights.removeValue(forKey: "mel_filterbank")
     let stftWin = weights.removeValue(forKey: "stft_window")
 
+    var mutableModel = model
     if let melFB {
-        model.melFilterbank = melFB.asType(.float32)
+        mutableModel.melFilterbank = melFB.asType(.float32)
     }
     if let stftWin {
-        model.stftWindow = stftWin.asType(.float32)
+        mutableModel.stftWindow = stftWin.asType(.float32)
     }
 
     // Build nested parameter dictionary from flat "a.b.c" keys
@@ -448,5 +727,4 @@ func loadGigaAMModel(from directory: URL) throws -> GigaAMCTCModel {
 
     try model.update(parameters: parameters, verify: .noUnusedKeys)
     eval(model)
-    return model
 }
