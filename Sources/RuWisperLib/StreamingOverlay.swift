@@ -110,7 +110,8 @@ class StreamingOverlay: NSPanel {
 
             let frame = self.frame
             let targetY = frame.origin.y
-            self.setFrameOrigin(NSPoint(x: frame.origin.x, y: targetY - 12))
+            // Slide down from behind the menu bar
+            self.setFrameOrigin(NSPoint(x: frame.origin.x, y: targetY + 12))
             self.animator().setFrameOrigin(NSPoint(x: frame.origin.x, y: targetY))
         }
     }
@@ -131,9 +132,11 @@ class StreamingOverlay: NSPanel {
 
     private func centerOnScreen() {
         if let screen = NSScreen.main {
-            let screenRect = screen.visibleFrame
-            let x = screenRect.origin.x + (screenRect.width - pillWidth) / 2
-            let y = screenRect.origin.y + 60
+            let fullFrame = screen.frame
+            let visibleFrame = screen.visibleFrame
+            // Place just below the menu bar (top of visibleFrame), with a small gap
+            let x = fullFrame.origin.x + (fullFrame.width - pillWidth) / 2
+            let y = visibleFrame.maxY - pillHeight - 8
             setFrame(NSRect(x: x, y: y, width: pillWidth, height: pillHeight), display: true)
         }
     }
