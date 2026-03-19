@@ -319,13 +319,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         stopStreamingTranscription()
         recorder.onAudioSamples = nil
 
-        // Keep overlay visible — switch to processing state
+        // Keep overlay visible while we finalize transcription
         let hadOverlay = overlay.isVisible
         Task { @MainActor in
             self.overlay.setLocked(false)
-            if hadOverlay {
-                self.overlay.showProcessing()
-            }
         }
 
         guard let audioURL = recorder.stopRecording() else {
@@ -347,11 +344,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar.state = .transcribing
         NSLog("[OW] Starting transcription with engine: %@", config.effectiveEngine)
 
-        // If overlay wasn't shown (non-streaming engine), show it now for processing state
+        // If overlay wasn't shown (non-streaming engine), show it now
         if !hadOverlay {
             Task { @MainActor in
                 self.overlay.show()
-                self.overlay.showProcessing()
             }
         }
 
