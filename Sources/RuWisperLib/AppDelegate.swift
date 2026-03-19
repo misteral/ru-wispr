@@ -15,7 +15,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var streamingInsertedText: String = ""
     private var streamingContext = StreamingContext()
     var config: Config!
-    var overlay: StreamingOverlay!
+    var overlay: NotchOverlay!
     var isPressed = false
     var isReady = false
     var isLocked = false
@@ -28,7 +28,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar = StatusBarController()
         recorder = AudioRecorder()
         inserter = TextInserter()
-        overlay = StreamingOverlay()
+        overlay = NotchOverlay()
 
         Task {
             await self.setup()
@@ -320,7 +320,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         recorder.onAudioSamples = nil
 
         // Keep overlay visible — switch to processing state
-        let hadOverlay = overlay.alphaValue > 0
+        let hadOverlay = overlay.isVisible
         Task { @MainActor in
             self.overlay.setLocked(false)
             if hadOverlay {
