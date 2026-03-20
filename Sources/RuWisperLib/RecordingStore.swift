@@ -6,7 +6,7 @@ public struct Recording {
 }
 
 public class RecordingStore {
-    public static var recordingsDir = Config.configDir.appendingPathComponent("recordings")
+    public static var recordingsDir = Config.dataDir.appendingPathComponent("recordings")
 
     static let filePrefix = "recording-"
     static let fileExtension = "wav"

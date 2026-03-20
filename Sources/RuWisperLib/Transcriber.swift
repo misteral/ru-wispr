@@ -100,7 +100,7 @@ public class Transcriber {
         let modelFileName = "ggml-\(modelSize).bin"
 
         let candidates = [
-            "\(Config.configDir.path)/models/\(modelFileName)",
+            "\(Config.dataDir.path)/models/\(modelFileName)",
             "/opt/homebrew/share/whisper-cpp/models/\(modelFileName)",
             "/usr/local/share/whisper-cpp/models/\(modelFileName)",
             "\(FileManager.default.homeDirectoryForCurrentUser.path)/.cache/whisper/\(modelFileName)",

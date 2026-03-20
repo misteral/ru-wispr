@@ -31,7 +31,7 @@ MODEL_FILE="ggml-${MODEL_SIZE}.bin"
 MODEL_PATH=""
 
 for dir in \
-    "$HOME/.config/ru-wisper/models" \
+    "$HOME/Library/Application Support/RuWispr/models" \
     "/opt/homebrew/share/whisper-cpp/models" \
     "/usr/local/share/whisper-cpp/models" \
     "$HOME/.cache/whisper"; do
@@ -43,7 +43,7 @@ done
 
 if [ -z "$MODEL_PATH" ]; then
     echo "Downloading $MODEL_SIZE model..."
-    MODEL_DIR="$HOME/.config/ru-wisper/models"
+    MODEL_DIR="$HOME/Library/Application Support/RuWispr/models"
     mkdir -p "$MODEL_DIR"
     MODEL_PATH="$MODEL_DIR/$MODEL_FILE"
     curl -L --progress-bar -o "$MODEL_PATH" \

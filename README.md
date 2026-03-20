@@ -1,24 +1,19 @@
 <p align="center">
-  <img src="logo.svg" width="80" alt="open-wispr logo">
+  <img src="logo.svg" width="80" alt="RuWispr logo">
 </p>
 
-<h1 align="center">open-wispr</h1>
+<h1 align="center">RuWispr</h1>
 
 <p align="center">
-  <strong><a href="https://open-wispr.com">open-wispr.com</a></strong><br>
   Local, private voice dictation for macOS. Hold a key, speak, release — your words appear at the cursor.<br>
   Everything runs on-device. No audio or text ever leaves your machine.
 </p>
 
-<p align="center">Powered by <a href="https://github.com/ggml-org/whisper.cpp">whisper.cpp</a> with Metal acceleration on Apple Silicon.</p>
+<p align="center">Powered by <a href="https://github.com/ggml-org/whisper.cpp">whisper.cpp</a> and <a href="https://github.com/salute-developers/GigaAM">GigaAM</a> with Metal acceleration on Apple Silicon.</p>
 
 ## Install
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/human37/open-wispr/main/scripts/install.sh | bash -s -- --version 0.14.0
-```
-
-The script handles everything: installs via Homebrew, walks you through granting permissions, downloads the Whisper model, and starts the service. You'll see live feedback as each step completes.
+Download the latest DMG from [Releases](https://github.com/ABorovenskoy/ru-wispr/releases), open it, and drag RuWispr to Applications.
 
 A waveform icon appears in your menu bar when it's running.
 
@@ -26,17 +21,9 @@ The default hotkey is the **Globe key** (🌐, bottom-left). Hold it, speak, rel
 
 > **[Full installation guide](docs/install-guide.md)** — permissions walkthrough with screenshots, non-English macOS instructions, and troubleshooting.
 
-## Uninstall
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/human37/open-wispr/main/scripts/uninstall.sh | bash
-```
-
-This stops the service, removes the formula, tap, config, models, app bundle, logs, and permissions.
-
 ## Configuration
 
-Edit `~/.config/open-wispr/config.json`:
+Edit `~/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json` (synced via iCloud Drive):
 
 ```json
 {
@@ -48,7 +35,7 @@ Edit `~/.config/open-wispr/config.json`:
 }
 ```
 
-Then restart: `brew services restart open-wispr`
+Then restart RuWispr from the menu bar.
 
 | Option | Default | Values |
 |---|---|---|
@@ -91,7 +78,7 @@ Click the menu bar icon to access **Copy Last Dictation** — recovers your most
 
 ## Compare
 
-| | open-wispr | VoiceInk | Wispr Flow | Superwhisper | Apple Dictation |
+| | RuWispr | VoiceInk | Wispr Flow | Superwhisper | Apple Dictation |
 |---|---|---|---|---|---|
 | **Price** | **Free** | $39.99 | $15/mo | $8.49/mo | Free |
 | **Open source** | MIT | GPLv3 | No | No | No |
@@ -102,13 +89,13 @@ Click the menu bar icon to access **Copy Last Dictation** — recovers your most
 
 ## Privacy
 
-open-wispr is completely local. Audio is recorded to a temp file, transcribed by whisper.cpp on your CPU/GPU, and the temp file is deleted. No network requests are made except to download the Whisper model on first run. Optionally, you can configure open-wispr to store a number of past recordings locally via the `maxRecordings` setting. Those recordings stay private and on your machine, and we default to not storing anything.
+RuWispr is completely local. Audio is recorded to a temp file, transcribed by whisper.cpp or GigaAM on your CPU/GPU, and the temp file is deleted. No network requests are made except to download models on first run. Optionally, you can configure RuWispr to store a number of past recordings locally via the `maxRecordings` setting. Those recordings stay private and on your machine, and we default to not storing anything.
 
 ## Build from source
 
 ```bash
-git clone https://github.com/human37/open-wispr.git
-cd open-wispr
+git clone https://github.com/ABorovenskoy/ru-wispr.git
+cd ru-wispr
 brew install whisper-cpp
 swift build -c release
 .build/release/open-wispr start
@@ -116,7 +103,7 @@ swift build -c release
 
 ## Support
 
-open-wispr is free and always will be. If you find it useful, you can [leave a tip](https://buy.stripe.com/4gM5kC2AU0Ssd4l6Hqd7q00).
+RuWispr is free and always will be.
 
 ## License
 

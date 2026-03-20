@@ -12,7 +12,13 @@ brew uninstall ru-wisper 2>/dev/null || true
 echo "  Removing tap..."
 brew untap human37/ru-wisper 2>/dev/null || true
 
-echo "  Removing config and model..."
+echo "  Removing config (iCloud Drive)..."
+rm -rf ~/Library/Mobile\ Documents/com~apple~CloudDocs/RuWispr
+
+echo "  Removing data (models, recordings)..."
+rm -rf ~/Library/Application\ Support/RuWispr
+
+echo "  Removing legacy config..."
 rm -rf ~/.config/ru-wisper
 
 echo "  Removing app bundle..."

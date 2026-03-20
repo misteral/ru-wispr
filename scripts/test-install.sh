@@ -20,7 +20,7 @@ check_output() {
     fi
 }
 
-CONFIG_FILE="$HOME/.config/ru-wisper/config.json"
+CONFIG_FILE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json"
 CONFIG_BACKUP=""
 
 backup_config() {

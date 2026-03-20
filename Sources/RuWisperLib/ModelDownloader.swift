@@ -5,7 +5,7 @@ public class ModelDownloader {
 
     public static func download(modelSize: String) throws {
         let modelFileName = "ggml-\(modelSize).bin"
-        let modelsDir = Config.configDir.appending(path: "models")
+        let modelsDir = Config.dataDir.appending(path: "models")
         let destPath = modelsDir.appending(path: modelFileName)
 
         if FileManager.default.fileExists(atPath: destPath.path) {

@@ -50,7 +50,7 @@ public class GigaAMTranscriber {
 
     /// Default model directory (search order):
     /// 1. App bundle: Contents/Resources/gigaam-v3-rnnt-mlx/
-    /// 2. User config: ~/.config/ru-wisper/models/gigaam-v3-rnnt-mlx/
+    /// 2. User data: ~/Library/Application Support/RuWispr/models/gigaam-v3-rnnt-mlx/
     public static let defaultModelDir: URL = {
         // 1. Resolve via executable path: .app/Contents/MacOS/binary → .app/Contents/Resources/
         let execPath = ProcessInfo.processInfo.arguments[0]
@@ -61,14 +61,14 @@ public class GigaAMTranscriber {
             fputs("GigaAM: using bundled RNNT model at \(bundled.path)\n", stderr)
             return bundled
         }
-        // 2. Fallback to user config directory
-        let userDir = Config.configDir.appending(path: "models/gigaam-v3-rnnt-mlx")
+        // 2. Fallback to user data directory
+        let userDir = Config.dataDir.appending(path: "models/gigaam-v3-rnnt-mlx")
         if FileManager.default.fileExists(atPath: userDir.appending(path: "config.json").path) {
             fputs("GigaAM: using user RNNT model at \(userDir.path)\n", stderr)
             return userDir
         }
         // 3. Legacy CTC fallback
-        let ctcDir = Config.configDir.appending(path: "models/gigaam-v3-ctc-mlx")
+        let ctcDir = Config.dataDir.appending(path: "models/gigaam-v3-ctc-mlx")
         fputs("GigaAM: RNNT model not found, falling back to \(ctcDir.path)\n", stderr)
         return ctcDir
     }()

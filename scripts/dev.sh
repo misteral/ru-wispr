@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-CONFIG_FILE="$HOME/.config/ru-wisper/config.json"
+CONFIG_FILE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json"
 
 # Read a JSON value using grep/sed (no python dependency)
 read_config() {

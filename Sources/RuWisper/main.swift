@@ -144,6 +144,7 @@ func cmdStatus() {
 
     print("ru-wisper v\(version)")
     print("Config:      \(Config.configFile.path)")
+    print("Data:        \(Config.dataDir.path)")
     print("Hotkey:      \(hotkeyDesc)")
     print("Engine:      \(config.effectiveEngine)")
     if config.effectiveEngine == "gigaam" {
