@@ -136,6 +136,10 @@ final class NotchOverlay {
     private var notch: DynamicNotch<NotchTranscriptionView, EmptyView, EmptyView>?
     nonisolated(unsafe) private(set) var isVisible = false
 
+    /// Monotonic generation counter — incremented every time a new overlay session starts.
+    /// Used to prevent stale auto-hide from dismissing a newer session's overlay.
+    private(set) var generation: Int = 0
+
     func updateText(_ text: String) {
         state.text = text
     }
@@ -145,9 +149,18 @@ final class NotchOverlay {
     }
 
     func show() {
+        // Hide any existing notch before creating a new one.
+        // Capture by value so the async hide targets the OLD notch, not a future one.
+        let oldNotch = notch
+        notch = nil
+        if let oldNotch {
+            Task { await oldNotch.hide() }
+        }
+
         state.text = ""
         state.phase = .recording
         isVisible = true
+        generation += 1
 
         let s = state
         notch = DynamicNotch(style: .auto) {
@@ -174,9 +187,12 @@ final class NotchOverlay {
 
     func hide() {
         isVisible = false
+        // Capture by value — the async hide must target THIS notch,
+        // not whatever `self.notch` is when the Task actually runs.
+        let notchToHide = notch
+        notch = nil
         Task {
-            await notch?.hide()
-            notch = nil
+            await notchToHide?.hide()
         }
     }
 

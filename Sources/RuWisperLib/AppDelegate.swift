@@ -403,10 +403,17 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     self.statusBar.state = .idle
                     self.statusBar.buildMenu()
                 }
-                // Auto-hide overlay after showing done state
+                // Auto-hide overlay after showing done state.
+                // Capture the overlay generation so we skip the hide
+                // if a new recording started during the delay.
                 if !text.isEmpty {
+                    let gen = await MainActor.run { self.overlay.generation }
                     try? await Task.sleep(for: .seconds(1.5))
                     await MainActor.run {
+                        guard self.overlay.generation == gen else {
+                            NSLog("[OW] Skipping stale auto-hide (gen %d vs current %d)", gen, self.overlay.generation)
+                            return
+                        }
                         self.overlay.hide()
                     }
                 }
