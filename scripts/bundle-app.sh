@@ -19,6 +19,10 @@ if [ -d "$REPO_DIR/Resources/Audio" ]; then
     cp -R "$REPO_DIR/Resources/Audio" "$APP_DIR/Contents/Resources/Audio"
 fi
 
+if [ -f "$REPO_DIR/Resources/gigaam-v3-rnnt-mlx/config.json" ] && [ -f "$REPO_DIR/Resources/gigaam-v3-rnnt-mlx/model.safetensors" ]; then
+    cp -R "$REPO_DIR/Resources/gigaam-v3-rnnt-mlx" "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
+fi
+
 cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

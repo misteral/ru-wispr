@@ -57,13 +57,31 @@ if [ -d "Resources/Audio" ]; then
 fi
 
 # GigaAM RNNT model — bundle if available
-GIGAAM_MODEL="${GIGAAM_MODEL:-$HOME/.config/ru-wisper/models/gigaam-v3-rnnt-mlx}"
-if [ -f "$GIGAAM_MODEL/config.json" ] && [ -f "$GIGAAM_MODEL/model.safetensors" ]; then
-    echo "==> Bundling GigaAM RNNT model..."
-    cp -R "$GIGAAM_MODEL" "$RESOURCES/gigaam-v3-rnnt-mlx"
+PROJECT_GIGAAM_MODEL="$(pwd)/Resources/gigaam-v3-rnnt-mlx"
+APP_SUPPORT_GIGAAM_MODEL="$HOME/Library/Application Support/RuWispr/models/gigaam-v3-rnnt-mlx"
+LEGACY_GIGAAM_MODEL="$HOME/.config/ru-wisper/models/gigaam-v3-rnnt-mlx"
+
+if [ -n "${GIGAAM_MODEL:-}" ]; then
+    GIGAAM_MODEL_DIR="$GIGAAM_MODEL"
+elif [ -f "$PROJECT_GIGAAM_MODEL/config.json" ] && [ -f "$PROJECT_GIGAAM_MODEL/model.safetensors" ]; then
+    GIGAAM_MODEL_DIR="$PROJECT_GIGAAM_MODEL"
+elif [ -f "$APP_SUPPORT_GIGAAM_MODEL/config.json" ] && [ -f "$APP_SUPPORT_GIGAAM_MODEL/model.safetensors" ]; then
+    GIGAAM_MODEL_DIR="$APP_SUPPORT_GIGAAM_MODEL"
+elif [ -f "$LEGACY_GIGAAM_MODEL/config.json" ] && [ -f "$LEGACY_GIGAAM_MODEL/model.safetensors" ]; then
+    GIGAAM_MODEL_DIR="$LEGACY_GIGAAM_MODEL"
 else
-    echo "==> GigaAM RNNT model not found at $GIGAAM_MODEL (skipping bundle)"
-    echo "    Set GIGAAM_MODEL=/path/to/gigaam-v3-rnnt-mlx to bundle it"
+    GIGAAM_MODEL_DIR=""
+fi
+
+if [ -n "$GIGAAM_MODEL_DIR" ] && [ -f "$GIGAAM_MODEL_DIR/config.json" ] && [ -f "$GIGAAM_MODEL_DIR/model.safetensors" ]; then
+    echo "==> Bundling GigaAM RNNT model from $GIGAAM_MODEL_DIR..."
+    cp -R "$GIGAAM_MODEL_DIR" "$RESOURCES/gigaam-v3-rnnt-mlx"
+else
+    echo "==> GigaAM RNNT model not found (skipping bundle)"
+    echo "    Checked: $PROJECT_GIGAAM_MODEL"
+    echo "             $APP_SUPPORT_GIGAAM_MODEL"
+    echo "             $LEGACY_GIGAAM_MODEL"
+    echo "    Or set GIGAAM_MODEL=/path/to/gigaam-v3-rnnt-mlx"
 fi
 
 # Info.plist
