@@ -50,6 +50,12 @@ Then restart RuWispr from the menu bar.
 
 Larger models are more accurate but slower and use more memory. The default `base.en` is a good balance for most users.
 
+For GigaAM, the current bundled RNNT model is published on Hugging Face:
+- https://huggingface.co/al-bo/gigaam-v3-rnnt-mlx
+
+Legacy CTC conversion:
+- https://huggingface.co/al-bo/gigaam-v3-ctc-mlx
+
 | Model | Size | Speed | Accuracy | Best for |
 |---|---|---|---|---|
 | `tiny.en` | 75 MB | Fastest | Lower | Quick notes, short phrases |
