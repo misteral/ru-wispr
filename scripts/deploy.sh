@@ -10,7 +10,6 @@ fi
 VERSION="$1"
 TAG="v${VERSION}"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TAP_DIR="/tmp/homebrew-dikto"
 
 echo "==> Deploying dikto ${TAG}"
 
@@ -31,17 +30,6 @@ git -C "${REPO_DIR}" diff --cached --quiet && echo "Nothing to commit in main re
 git -C "${REPO_DIR}" tag -f "${TAG}"
 git -C "${REPO_DIR}" push origin main --tags
 
-echo "==> Updating tap formula..."
-if [ ! -d "${TAP_DIR}" ]; then
-  git clone git@github.com:misteral/homebrew-dikto.git "${TAP_DIR}"
-fi
-git -C "${TAP_DIR}" pull --rebase
-sed -i '' "s|tag: \"v[^\"]*\"|tag: \"${TAG}\"|" "${TAP_DIR}/dikto.rb"
-git -C "${TAP_DIR}" add dikto.rb
-git -C "${TAP_DIR}" diff --cached --quiet && echo "Tap already up to date." || \
-  git -C "${TAP_DIR}" commit -m "Bump to ${TAG}"
-git -C "${TAP_DIR}" push origin main
-
 echo "==> Generating release notes..."
 PREV_TAG=$(git -C "${REPO_DIR}" describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 if [ -n "$PREV_TAG" ]; then
@@ -54,31 +42,11 @@ NOTES=$(claude -p "You are writing release notes for dikto ${TAG}, a local voice
 
 ${COMMITS}
 
-Write concise GitHub release notes in markdown. Use these sections only if relevant: ### What's New, ### Bug Fixes, ### Other Changes. Use bullet points. Don't include commit hashes. Keep it short and user-facing — skip internal/dev-only changes. End with a one-liner upgrade instruction: brew update && brew upgrade dikto")
+Write concise GitHub release notes in markdown. Use these sections only if relevant: ### What's New, ### Bug Fixes, ### Other Changes. Use bullet points. Don't include commit hashes. Keep it short and user-facing — skip internal/dev-only changes. End with a one-liner install instruction: Download the latest DMG from GitHub Releases.")
 
 echo "==> Creating GitHub Release..."
 gh release create "${TAG}" --repo misteral/dikto --notes "${NOTES}"
 
-echo "==> Waiting for bottle builds..."
-sleep 15
-RUN_ID=""
-for _ in $(seq 1 30); do
-  RUN_ID=$(gh run list --workflow=build-bottle.yml --event=release --limit=1 --json databaseId --jq '.[0].databaseId' --repo misteral/dikto 2>/dev/null)
-  if [ -n "$RUN_ID" ]; then
-    break
-  fi
-  sleep 5
-done
-
-if [ -z "$RUN_ID" ]; then
-  echo "Warning: Could not find bottle build workflow. Skipping bottle update."
-  echo "Run 'bash scripts/update-bottles.sh ${VERSION}' manually after bottles are built."
-else
-  echo "==> Watching bottle build (run ${RUN_ID})..."
-  gh run watch "$RUN_ID" --repo misteral/dikto
-  bash "${REPO_DIR}/scripts/update-bottles.sh" "$VERSION"
-fi
-
 echo ""
 echo "==> Deployed ${TAG}"
-echo "Users can update with: brew update && brew upgrade dikto && brew services restart dikto"
+echo "Users can download the DMG from: https://github.com/misteral/dikto/releases/tag/${TAG}"

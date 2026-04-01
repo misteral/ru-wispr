@@ -2,19 +2,19 @@
 
 ## Quick Install
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/misteral/dikto/main/scripts/install.sh | bash
-```
+1. Download the latest DMG from [GitHub Releases](https://github.com/misteral/dikto/releases/latest)
+2. Open the DMG
+3. Drag `Dikto.app` to **Applications**
+4. Launch **Dikto** from Applications or Spotlight
 
-The installer handles everything automatically — Homebrew tap, formula install, permissions, model download, and service startup.
+A waveform icon appears in your menu bar when it's running.
 
-## What the installer does
+## What happens on first launch
 
-1. **Installs via Homebrew** — taps `misteral/dikto` and installs the formula
-2. **Copies the app bundle** to `~/Applications/Dikto.app`
-3. **Requests permissions** — Microphone and Accessibility
-4. **Downloads the Whisper model** (~142 MB, one-time)
-5. **Starts the background service** via `brew services`
+1. **Requests permissions** — Microphone and Accessibility
+2. **Creates config** in iCloud Drive
+3. **Downloads the selected model** on first use if it's not already present
+4. **Starts in the menu bar** and waits for your hotkey
 
 ## Granting Permissions
 
@@ -22,11 +22,11 @@ Dikto needs two macOS permissions to work:
 
 ### Microphone
 
-A system dialog will appear automatically during install. Click **Allow**.
+A system dialog will appear automatically. Click **Allow**.
 
 ### Accessibility
 
-Accessibility permission lets Dikto detect your hotkey globally. During install, a pop-up like this will appear:
+Accessibility permission lets Dikto detect your hotkey globally. During first launch, a pop-up like this will appear:
 
 <p align="center">
   <img width="465" alt="Accessibility permission prompt" src="https://github.com/user-attachments/assets/9a0533ae-c174-4395-9533-46b55c3cb592" />
@@ -42,7 +42,7 @@ If you missed the pop-up, navigate there manually:
 
 > **System Settings → Privacy & Security → Accessibility**
 
-If `Dikto` doesn't appear in the list, click the **+** button and add it from `~/Applications/Dikto.app`.
+If `Dikto` doesn't appear in the list, click the **+** button and add it from `/Applications/Dikto.app`.
 
 ### Non-English macOS
 
@@ -61,22 +61,13 @@ For reference, here's the path in a few languages:
 
 ## Troubleshooting
 
-### "Timed out waiting for Accessibility permission"
-
-The installer waits up to 5 minutes for you to grant Accessibility. If it times out:
-
-1. Uninstall first:
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/misteral/dikto/main/scripts/uninstall.sh | bash
-   ```
-2. Re-run the installer. Watch for the Accessibility pop-up and grant it promptly.
-
 ### App not appearing in Accessibility list
 
 1. Open **System Settings → Privacy & Security → Accessibility**
 2. Click the **+** button
-3. Navigate to `~/Applications/` and select `Dikto.app`
+3. Navigate to `/Applications/` and select `Dikto.app`
 4. Toggle it **ON**
+5. Quit and relaunch Dikto
 
 ### Microphone denied
 
@@ -84,7 +75,7 @@ If you accidentally denied microphone access:
 
 1. Go to **System Settings → Privacy & Security → Microphone**
 2. Find **Dikto** and toggle it **ON**
-3. Re-run the installer
+3. Quit and relaunch Dikto
 
 ### Globe key opens emoji picker
 
@@ -98,11 +89,7 @@ If you set right Option (`keyCode: 61`) as the hotkey, Dikto should only trigger
 
 ### Config resets to default after editing `config.json`
 
-If `config.json` has invalid JSON or unsupported values, Dikto prints a warning and falls back to defaults for that run, without overwriting your file. Fix the JSON and restart the service:
-
-```bash
-brew services restart dikto
-```
+If `config.json` has invalid JSON or unsupported values, Dikto prints a warning and falls back to defaults for that run, without overwriting your file. Fix the JSON, then quit Dikto from the menu bar and launch it again.
 
 ## Language Support
 
@@ -120,7 +107,7 @@ For example, to use Italian:
 }
 ```
 
-Then restart: `brew services restart dikto`
+Then quit Dikto from the menu bar and launch it again.
 
 The multilingual model will be downloaded automatically on next use.
 
@@ -151,11 +138,13 @@ Larger models are more accurate but slower. `base` is a good starting point for 
 
 ## Uninstall
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/misteral/dikto/main/scripts/uninstall.sh | bash
-```
+1. Quit Dikto from the menu bar
+2. Move `Dikto.app` from **Applications** to the Trash
+3. Optionally remove app data for a full reset:
+   - `~/Library/Mobile Documents/com~apple~CloudDocs/Dikto`
+   - `~/Library/Application Support/Dikto`
 
-This removes the service, formula, tap, config, models, app bundle, logs, and resets Accessibility permissions.
+If you're working from a local checkout of the repo, you can also run `bash scripts/uninstall.sh` for a full cleanup.
 
 ## Build from Source
 

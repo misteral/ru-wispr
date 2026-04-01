@@ -3,14 +3,10 @@ set -euo pipefail
 
 echo "Uninstalling Dikto..."
 
-echo "  Stopping service..."
-brew services stop dikto 2>/dev/null || true
-
-echo "  Removing formula..."
-brew uninstall dikto 2>/dev/null || true
-
-echo "  Removing tap..."
-brew untap misteral/dikto 2>/dev/null || true
+echo "  Stopping running app..."
+pkill -f "/Dikto.app/Contents/MacOS/dikto" 2>/dev/null || true
+pkill -f "dikto start" 2>/dev/null || true
+sleep 1
 
 echo "  Removing config (iCloud Drive)..."
 rm -rf ~/Library/Mobile\ Documents/com~apple~CloudDocs/Dikto
@@ -31,10 +27,12 @@ rm -rf ~/Applications/RuWisper.app
 rm -rf /Applications/RuWisper.app 2>/dev/null || true
 
 echo "  Removing logs..."
-rm -f /opt/homebrew/var/log/dikto.log
+rm -f ~/Library/Logs/Dikto.log 2>/dev/null || true
+rm -f /tmp/dikto*.log 2>/dev/null || true
 
 echo "  Resetting permissions..."
 tccutil reset Accessibility co.itbeaver.dikto 2>/dev/null || true
+tccutil reset Microphone co.itbeaver.dikto 2>/dev/null || true
 
 echo ""
 echo "Dikto has been completely uninstalled."

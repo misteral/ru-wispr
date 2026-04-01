@@ -36,6 +36,7 @@ APPLE_ID="email" APP_PASSWORD="xxxx-xxxx-xxxx-xxxx" bash scripts/release.sh
 4. Verify the DMG opens and app launches correctly
 5. Upload DMG to GitHub Releases
 6. Tag the release in git
+7. No Homebrew/tap release — distribution is via GitHub Releases DMG only
 
 ## Versioning
 
@@ -51,5 +52,5 @@ APPLE_ID="email" APP_PASSWORD="xxxx-xxxx-xxxx-xxxx" bash scripts/release.sh
 | `build.sh` | Build with Metal shaders, install to /Applications |
 | `scripts/release.sh` | Sign with Developer ID, create DMG, optionally notarize |
 | `scripts/bundle-app.sh` | Create macOS .app bundle |
-| `scripts/deploy.sh` | Release automation |
+| `scripts/deploy.sh` | GitHub release automation |
 | `scripts/dev.sh` | Development cycle (configure, build, bundle, launch) |

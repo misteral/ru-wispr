@@ -223,14 +223,8 @@ echo "────────────────────"
 # Kill any running instances
 echo "  Stopping running instances..."
 pkill -f "dikto start" 2>/dev/null || true
-brew services stop dikto 2>/dev/null || true
+pkill -f "/Dikto.app/Contents/MacOS/dikto" 2>/dev/null || true
 sleep 1
-
-# Uninstall brew version
-if brew list dikto &>/dev/null; then
-    echo "  Removing brew installation..."
-    brew uninstall --force dikto 2>/dev/null || true
-fi
 
 if ! brew list whisper-cpp &>/dev/null; then
     echo "  Reinstalling whisper-cpp..."

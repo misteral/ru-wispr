@@ -41,7 +41,7 @@ Pure logic tests with no external dependencies.
 
 ### Integration Tests (`scripts/`)
 
-**Install smoke test** (`test-install.sh`):
+**CLI smoke test** (`test-install.sh`):
 - Builds from source and verifies the binary
 - Tests all CLI commands (`--help`, `status`, `get-hotkey`, `set-hotkey`, `set-model`)
 - Validates error handling for invalid inputs

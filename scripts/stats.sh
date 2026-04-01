@@ -55,7 +55,7 @@ blank
 close
 echo ""
 
-# --- Bottle downloads ---
+# --- Release asset downloads ---
 declare -a dl_tags=() dl_counts=()
 dl_max=0 dl_total=0
 while IFS=' ' read -r tag count; do
@@ -65,7 +65,7 @@ while IFS=' ' read -r tag count; do
   [ "$count" -gt "$dl_max" ] && dl_max=$count
 done < <(gh api "repos/$REPO/releases" --jq '.[] | "\(.tag_name) \([.assets[].download_count] | add // 0)"')
 
-header "BOTTLE DOWNLOADS (by release)"
+header "RELEASE ASSET DOWNLOADS (by release)"
 blank
 for i in "${!dl_tags[@]}"; do
   row "${dl_tags[$i]}" 8 42 "${dl_counts[$i]}" "$dl_max"

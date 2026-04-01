@@ -37,7 +37,7 @@ restore_config() {
     fi
 }
 
-echo "dikto install smoke tests"
+echo "dikto CLI smoke tests"
 echo "-------------------------------"
 
 echo ""
