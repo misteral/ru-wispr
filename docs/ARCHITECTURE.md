@@ -12,6 +12,7 @@ Dikto is a local voice dictation app for macOS. Push-to-talk records audio, tran
 |---|---|---|
 | `DiktoLib` | `Sources/DiktoLib/` | Core library — audio, transcription, UI, config |
 | `dikto` | `Sources/Dikto/` | CLI entry point (`main.swift`) |
+| `dikto-eval` | `eval/tool/` | Swift evaluation tool for local LLM post-processing models |
 | `DiktoTests` | `Tests/DiktoTests/` | Unit tests for the library |
 
 ### DiktoLib Components
@@ -27,6 +28,9 @@ Dikto is a local voice dictation app for macOS. Push-to-talk records audio, tran
 | `GigaAM/GigaAMModel.swift` | GigaAM neural network model definition |
 | `GigaAM/GigaAMConfig.swift` | GigaAM model configuration |
 | `TextPostProcessor.swift` | Spoken punctuation replacement and text cleanup |
+| `TextPostProcessingProvider.swift` | Post-processing pipeline selection and provider composition |
+| `MLXLocalLLMTextPostProcessingProvider.swift` | MLX local LLM text cleanup provider and benchmark engine |
+| `LocalLLMEvaluationSupport.swift` | Dataset/model loaders and reusable local LLM evaluation runner |
 | `TextInserter.swift` | Pasteboard save/restore + simulated Cmd+V keystroke |
 | `Config.swift` | JSON config in iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json`); `FlexBool` (accepts bool/string/int); auto-migrates from legacy RuWispr paths |
 | `ModelDownloader.swift` | Whisper model download from HuggingFace |
@@ -75,7 +79,10 @@ Entry point: `Sources/Dikto/main.swift`
 | `set-engine` | Switch between Whisper and GigaAM |
 | `download-model` | Pre-download a Whisper model |
 | `status` | Print running status |
+| `test-foundation-model` | Benchmark Apple Foundation Models as a text cleanup layer |
+| `test-local-llm` | Benchmark an MLX local LLM as a text cleanup layer |
 | `test-gigaam` | Test GigaAM transcription |
+| `dikto-eval` | Run dataset-based comparisons across multiple local LLM candidates |
 
 ## Platform Requirements
 

@@ -1,0 +1,249 @@
+{
+  "createdAt" : "2026-04-01T19:18:47Z",
+  "datasetPath" : "\/Users\/aleksandrbobrov\/Developer\/personal\/projects\/ru-wispr\/eval\/datasets\/text-postprocessing-v1.jsonl",
+  "language" : "ru",
+  "modelReports" : [
+    {
+      "caseResults" : [
+        {
+          "caseID" : "ru_mixed_xcode_github",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.12029898166656494,
+            "generationTokenCount" : 26,
+            "promptTimeSeconds" : 0.14006900787353516,
+            "promptTokenCount" : 171,
+            "promptTokensPerSecond" : 1220.8268095565556,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 216.12818030384258
+          },
+          "exactMatch" : false,
+          "output" : "сейчас мы тестируем исправление текста в икс коде и гитхаб актионс",
+          "runIndex" : 1,
+          "similarity" : 0.6515151515151515,
+          "timeToFirstChunkSeconds" : 0.1445779800415039,
+          "totalDurationSeconds" : 0.2692760229110718
+        },
+        {
+          "caseID" : "ru_typo_capitalization",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.07880294322967529,
+            "generationTokenCount" : 17,
+            "promptTimeSeconds" : 0.11426913738250732,
+            "promptTokenCount" : 164,
+            "promptTokensPerSecond" : 1435.2081739360854,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 215.72798303297648
+          },
+          "exactMatch" : false,
+          "output" : "привет мир это тест орфографической ошибки и пунктуация",
+          "runIndex" : 1,
+          "similarity" : 0.864406779661017,
+          "timeToFirstChunkSeconds" : 0.11647510528564453,
+          "totalDurationSeconds" : 0.19980907440185547
+        },
+        {
+          "caseID" : "ru_api_webhook",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.1025310754776001,
+            "generationTokenCount" : 22,
+            "promptTimeSeconds" : 0.11362302303314209,
+            "promptTokenCount" : 171,
+            "promptTokensPerSecond" : 1504.9766802113857,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 214.56909427236357
+          },
+          "exactMatch" : false,
+          "output" : "мы сделали api endpoint для слэш вебхука и гитхаб оаут",
+          "runIndex" : 1,
+          "similarity" : 0.5087719298245614,
+          "timeToFirstChunkSeconds" : 0.11534595489501953,
+          "totalDurationSeconds" : 0.22230291366577148
+        },
+        {
+          "caseID" : "ru_readme_pdf",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.11223495006561279,
+            "generationTokenCount" : 24,
+            "promptTimeSeconds" : 0.11382710933685303,
+            "promptTokenCount" : 168,
+            "promptTokensPerSecond" : 1475.9225722128374,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 213.83713349513275
+          },
+          "exactMatch" : false,
+          "output" : "сохраните это в ридми, эмди, и потом экспортируйте в пдф",
+          "runIndex" : 1,
+          "similarity" : 0.625,
+          "timeToFirstChunkSeconds" : 0.11547303199768066,
+          "totalDurationSeconds" : 0.23213505744934082
+        },
+        {
+          "caseID" : "ru_json_url_config",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.051222920417785645,
+            "generationTokenCount" : 11,
+            "promptTimeSeconds" : 0.11392092704772949,
+            "promptTokenCount" : 169,
+            "promptTokensPerSecond" : 1483.485118842072,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 214.74761513559807
+          },
+          "exactMatch" : false,
+          "output" : "check jason config and update yandex for api server",
+          "runIndex" : 1,
+          "similarity" : 0.196078431372549,
+          "timeToFirstChunkSeconds" : 0.1155250072479248,
+          "totalDurationSeconds" : 0.1712789535522461
+        },
+        {
+          "caseID" : "ru_company_names",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.10337793827056885,
+            "generationTokenCount" : 22,
+            "promptTimeSeconds" : 0.11349618434906006,
+            "promptTokenCount" : 167,
+            "promptTokensPerSecond" : 1471.41510490245,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 212.8113635079457
+          },
+          "exactMatch" : false,
+          "output" : "мы сравнили виспер си пи пи и гигаам на эпл силикон",
+          "runIndex" : 1,
+          "similarity" : 0.3137254901960784,
+          "timeToFirstChunkSeconds" : 0.1150810718536377,
+          "totalDurationSeconds" : 0.2229599952697754
+        },
+        {
+          "caseID" : "ru_swift_cli",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.11213505268096924,
+            "generationTokenCount" : 24,
+            "promptTimeSeconds" : 0.1136859655380249,
+            "promptTokenCount" : 169,
+            "promptTokensPerSecond" : 1486.5511252879674,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 214.0276338771731
+          },
+          "exactMatch" : false,
+          "output" : "я зарелизил кли в свифте с икс кодом и гитхаб актионс",
+          "runIndex" : 1,
+          "similarity" : 0.339622641509434,
+          "timeToFirstChunkSeconds" : 0.11530697345733643,
+          "totalDurationSeconds" : 0.23201096057891846
+        },
+        {
+          "caseID" : "ru_team_message",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.07004797458648682,
+            "generationTokenCount" : 15,
+            "promptTimeSeconds" : 0.11380910873413086,
+            "promptTokenCount" : 171,
+            "promptTokensPerSecond" : 1502.5159400858909,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 214.13895388909216
+          },
+          "exactMatch" : false,
+          "output" : "please ping ane Denis in the stream after the si ai ran is over",
+          "runIndex" : 1,
+          "similarity" : 0.1159420289855072,
+          "timeToFirstChunkSeconds" : 0.11542689800262451,
+          "totalDurationSeconds" : 0.19002389907836914
+        },
+        {
+          "caseID" : "ru_markdown_pdf",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.11262798309326172,
+            "generationTokenCount" : 24,
+            "promptTimeSeconds" : 0.11329400539398193,
+            "promptTokenCount" : 173,
+            "promptTokensPerSecond" : 1527.0004745475226,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 213.0909152490707
+          },
+          "exactMatch" : false,
+          "output" : "сохраните оригинальный маркдаун в репозитории и отправьте PDF Александру",
+          "runIndex" : 1,
+          "similarity" : 0.8055555555555556,
+          "timeToFirstChunkSeconds" : 0.11506998538970947,
+          "totalDurationSeconds" : 0.23207199573516846
+        },
+        {
+          "caseID" : "ru_short_sentence",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.036975979804992676,
+            "generationTokenCount" : 8,
+            "promptTimeSeconds" : 0.09749305248260498,
+            "promptTokenCount" : 153,
+            "promptTokensPerSecond" : 1569.342595230555,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 216.3566737701377
+          },
+          "exactMatch" : false,
+          "output" : "как дела все хорошо надеюсь",
+          "runIndex" : 1,
+          "similarity" : 0.8,
+          "timeToFirstChunkSeconds" : 0.09902095794677734,
+          "totalDurationSeconds" : 0.14039397239685059
+        },
+        {
+          "caseID" : "ru_path_terms",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.0932619571685791,
+            "generationTokenCount" : 20,
+            "promptTimeSeconds" : 0.11293601989746094,
+            "promptTokenCount" : 165,
+            "promptTokensPerSecond" : 1461.004205299691,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 214.44971355092045
+          },
+          "exactMatch" : false,
+          "output" : "обнови пас до логс директории и проверь шелл скрипт",
+          "runIndex" : 1,
+          "similarity" : 0.41509433962264153,
+          "timeToFirstChunkSeconds" : 0.11461400985717773,
+          "totalDurationSeconds" : 0.2123030424118042
+        },
+        {
+          "caseID" : "ru_zoom_call",
+          "completionInfo" : {
+            "generationTimeSeconds" : 0.08392000198364258,
+            "generationTokenCount" : 18,
+            "promptTimeSeconds" : 0.11336004734039307,
+            "promptTokenCount" : 163,
+            "promptTokensPerSecond" : 1437.896364938434,
+            "stopReason" : "stop",
+            "tokensPerSecond" : 214.48998539714648
+          },
+          "exactMatch" : false,
+          "output" : "после зума созвона закинь саммари в ноушен",
+          "runIndex" : 1,
+          "similarity" : 0.5581395348837209,
+          "timeToFirstChunkSeconds" : 0.1155160665512085,
+          "totalDurationSeconds" : 0.20389604568481445
+        }
+      ],
+      "configuration" : {
+        "maxTokens" : 96,
+        "modelID" : "mlx-community\/Qwen2.5-1.5B-Instruct-4bit",
+        "temperature" : 0,
+        "timeoutMs" : 10000
+      },
+      "loadDurationSeconds" : 43.764166951179504,
+      "model" : {
+        "downloads" : 10325,
+        "family" : "Qwen2.5",
+        "id" : "mlx-community\/Qwen2.5-1.5B-Instruct-4bit",
+        "likes" : 2,
+        "maxTokens" : 96,
+        "notes" : "Current default candidate. Best first quality\/speed tradeoff to validate RU\/EN cleanup.",
+        "priority" : 4,
+        "sizeLabel" : "1.5B",
+        "sourceURL" : "https:\/\/huggingface.co\/mlx-community\/Qwen2.5-1.5B-Instruct-4bit",
+        "temperature" : 0,
+        "timeoutMs" : 10000
+      }
+    }
+  ],
+  "modelsPath" : "\/Users\/aleksandrbobrov\/Developer\/personal\/projects\/ru-wispr\/eval\/models\/local-llm-candidates.json",
+  "runs" : 1
+}

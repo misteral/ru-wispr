@@ -45,6 +45,7 @@ echo "Building..."
 swift build -c release 2>&1 | tail -1
 
 BIN=".build/release/dikto"
+EVAL_BIN=".build/release/dikto-eval"
 
 if [ -x "$BIN" ]; then
     pass "Binary is executable"
@@ -53,10 +54,19 @@ else
     exit 1
 fi
 
+if [ -x "$EVAL_BIN" ]; then
+    pass "Eval binary is executable"
+else
+    fail "Eval binary not found at $EVAL_BIN"
+fi
+
 check_output "--help shows usage" "Push-to-talk" "$BIN" --help
 check_output "status shows version" "dikto v" "$BIN" status
 check_output "status shows config path" "Config:" "$BIN" status
 check_output "get-hotkey works" "Current hotkey:" "$BIN" get-hotkey
+check_output "test-foundation-model help works" "Foundation Models" "$BIN" test-foundation-model --help
+check_output "test-local-llm help works" "Local LLM" "$BIN" test-local-llm --help
+check_output "dikto-eval help works" "evaluate MLX local LLM cleanup models" "$EVAL_BIN" --help
 
 backup_config
 trap restore_config EXIT

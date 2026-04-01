@@ -11,6 +11,12 @@ public struct Config: Codable {
     public var gigaamPath: String?  // path to gigaam-v3-ctc-mlx model directory
     public var soundFeedback: FlexBool?  // play sound on record start/stop (default: true)
     public var streaming: FlexBool?  // real-time transcription (default: true)
+    public var postProcessingProvider: String?  // "none" (default) or "local-llm"
+    public var postProcessingModelID: String?  // Hugging Face / mlx-community model id
+    public var postProcessingModelPath: String?  // local path to MLX model directory
+    public var postProcessingMaxTokens: Int?  // response token cap for local LLM cleanup
+    public var postProcessingTemperature: Double?  // sampling temperature (default: 0)
+    public var postProcessingTimeoutMs: Int?  // timeout for final cleanup pass
 
     public static let defaultMaxRecordings = 0
 
@@ -32,6 +38,27 @@ public struct Config: Codable {
         return streaming?.value ?? true
     }
 
+    public var effectivePostProcessingProvider: String {
+        let value = (postProcessingProvider ?? "none").lowercased()
+        return ["none", "local-llm"].contains(value) ? value : "none"
+    }
+
+    public var effectivePostProcessingModelID: String {
+        postProcessingModelID ?? "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
+    }
+
+    public var effectivePostProcessingMaxTokens: Int {
+        min(max(postProcessingMaxTokens ?? 96, 1), 512)
+    }
+
+    public var effectivePostProcessingTemperature: Float {
+        Float(postProcessingTemperature ?? 0)
+    }
+
+    public var effectivePostProcessingTimeoutMs: Int {
+        min(max(postProcessingTimeoutMs ?? 1500, 100), 15_000)
+    }
+
     public static let defaultConfig = Config(
         hotkey: HotkeyConfig(keyCode: 61, modifiers: []),
         modelPath: nil,
@@ -42,7 +69,13 @@ public struct Config: Codable {
         engine: "gigaam",
         gigaamPath: nil,
         soundFeedback: FlexBool(true),
-        streaming: FlexBool(true)
+        streaming: FlexBool(true),
+        postProcessingProvider: nil,
+        postProcessingModelID: nil,
+        postProcessingModelPath: nil,
+        postProcessingMaxTokens: nil,
+        postProcessingTemperature: nil,
+        postProcessingTimeoutMs: nil
     )
 
     /// Config directory in iCloud Drive (syncs across devices)

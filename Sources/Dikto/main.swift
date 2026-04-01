@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Dispatch
 import DiktoLib
 
 setvbuf(stdout, nil, _IOLBF, 0)
@@ -18,6 +19,8 @@ func printUsage() {
         dikto set-model <size>   Set the Whisper model
         dikto download-model [size]  Download a Whisper model
         dikto status             Show configuration and status
+        dikto test-foundation-model [options]  Benchmark Apple Foundation Models text cleanup
+        dikto test-local-llm [options]  Benchmark MLX local LLM text cleanup
         dikto --help             Show this help message
 
     HOTKEY EXAMPLES:
@@ -147,6 +150,12 @@ func cmdStatus() {
     print("Data:        \(Config.dataDir.path)")
     print("Hotkey:      \(hotkeyDesc)")
     print("Engine:      \(config.effectiveEngine)")
+    print("Post-proc:   \(TextPostProcessingProviderFactory.make(config: config).name)")
+    if config.effectivePostProcessingProvider == "local-llm" {
+        let source = config.postProcessingModelPath ?? config.effectivePostProcessingModelID
+        print("Post-proc model: \(source)")
+        print("Post-proc timeout: \(config.effectivePostProcessingTimeoutMs) ms")
+    }
     if config.effectiveEngine == "gigaam" {
         let gigaamReady = GigaAMTranscriber.isAvailable(path: config.gigaamPath)
         print("GigaAM:      \(gigaamReady ? "ready (native MLX)" : "not found")")
@@ -156,6 +165,225 @@ func cmdStatus() {
         print("Model:       \(config.modelSize)")
         print("Model ready: \(Transcriber.modelExists(modelSize: config.modelSize) ? "yes" : "no")")
         print("whisper-cpp: \(Transcriber.findWhisperBinary() != nil ? "yes" : "no")")
+    }
+}
+
+func formatSeconds(_ value: Double?) -> String {
+    guard let value else { return "n/a" }
+    return value.formatted(.number.precision(.fractionLength(3))) + "s"
+}
+
+final class LocalLLMModelLoadLogState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didReportWeightLoading = false
+
+    func markWeightLoadingIfNeeded() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if didReportWeightLoading {
+            return false
+        }
+        didReportWeightLoading = true
+        return true
+    }
+}
+
+func cmdTestLocalLLM(_ rawArgs: [String]) {
+    do {
+        let options = try LocalLLMPostProcessingBenchmarkOptions.parse(rawArgs)
+        if options.showHelp {
+            print(LocalLLMPostProcessingBenchmarkOptions.help)
+            return
+        }
+
+        do {
+            let metallibURL = try MLXMetalLibSupport.ensureCLICompatibleMetalLibrary { message in
+                print(message)
+            }
+            print("Using MLX Metal library: \(metallibURL.path)")
+        } catch {
+            print("Error preparing MLX Metal library: \(error.localizedDescription)")
+            exit(1)
+        }
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var exitCode: Int32 = 0
+
+        Task {
+            defer { semaphore.signal() }
+            do {
+                let logState = LocalLLMModelLoadLogState()
+                let report = try await LocalLLMPostProcessingBenchmarkRunner.run(options: options) { event in
+                    switch event {
+                    case .loadingModel(let source):
+                        print("Loading local LLM model: \(source)")
+                        print("Resolving model snapshot (cache or download)...")
+                    case .modelDownloadProgress(let completedUnitCount, let totalUnitCount):
+                        guard totalUnitCount > 0 else { return }
+                        if completedUnitCount >= totalUnitCount, totalUnitCount <= 1024 {
+                            print("Model snapshot: already available locally")
+                            if logState.markWeightLoadingIfNeeded() {
+                                print("Loading model weights into MLX...")
+                            }
+                        } else {
+                            let percent = (Double(completedUnitCount) / Double(totalUnitCount) * 100)
+                            print(
+                                "Downloading model snapshot: \(percent.formatted(.number.precision(.fractionLength(1))))%"
+                            )
+                            if completedUnitCount >= totalUnitCount, logState.markWeightLoadingIfNeeded() {
+                                print("Loading model weights into MLX...")
+                            }
+                        }
+                    case .modelLoaded(let durationSeconds):
+                        if logState.markWeightLoadingIfNeeded() {
+                            print("Loading model weights into MLX...")
+                        }
+                        print("Model ready in \(formatSeconds(durationSeconds))")
+                    case .startingCase(let runIndex, let totalRuns, let caseName):
+                        print("Starting case [\(runIndex)/\(totalRuns)]: \(caseName)")
+                    case .finishedCase(let runIndex, let totalRuns, let caseName, let totalDurationSeconds):
+                        print("Finished case [\(runIndex)/\(totalRuns)]: \(caseName) in \(formatSeconds(totalDurationSeconds))")
+                    }
+                }
+                let benchmarkCases = try options.benchmarkCases()
+                print("")
+                print("Local LLM benchmark")
+                print("Model:        \(report.configuration.sourceDescription)")
+                print("Language:     \(options.language)")
+                print("Load:         \(formatSeconds(report.loadDurationSeconds))")
+                print("Cases:        \(benchmarkCases.count) × runs: \(options.runs)")
+                print("Temperature:  \(options.temperature)")
+                print("Max tokens:   \(options.maxTokens)")
+                print("Timeout:      \(options.timeoutMs) ms")
+                print("")
+
+                for result in report.results {
+                    print("[run \(result.runIndex)] \(result.benchmarkCase.name)")
+                    print("Input:    \(result.benchmarkCase.input)")
+                    if let expected = result.benchmarkCase.expected {
+                        print("Expected: \(expected)")
+                    }
+                    print("Output:   \(result.output)")
+                    print("TTFT:     \(formatSeconds(result.timeToFirstChunkSeconds))")
+                    print("Total:    \(formatSeconds(result.totalDurationSeconds))")
+                    if let info = result.completionInfo {
+                        print("Tokens:   prompt=\(info.promptTokenCount), generated=\(info.generationTokenCount), tok/s=\(info.tokensPerSecond.formatted(.number.precision(.fractionLength(1))))")
+                    }
+                    if let exactMatch = result.exactMatch, let similarity = result.similarity {
+                        let similarityPercent = (similarity * 100).formatted(.number.precision(.fractionLength(1)))
+                        print("Quality:  exact=\(exactMatch ? "yes" : "no"), similarity=\(similarityPercent)%")
+                    }
+                    print("")
+                }
+
+                print("Summary")
+                print("Average TTFT:  \(formatSeconds(report.averageTimeToFirstChunkSeconds))")
+                print("Average total: \(formatSeconds(report.averageTotalDurationSeconds))")
+                if report.scoredResults > 0 {
+                    print("Exact matches: \(report.exactMatches)/\(report.scoredResults)")
+                }
+                if let averageSimilarity = report.averageSimilarity {
+                    let similarityPercent = (averageSimilarity * 100).formatted(.number.precision(.fractionLength(1)))
+                    print("Avg similarity: \(similarityPercent)%")
+                }
+            } catch {
+                print("Error: \(error.localizedDescription)")
+                exitCode = 1
+            }
+        }
+
+        semaphore.wait()
+        if exitCode != 0 {
+            exit(exitCode)
+        }
+    } catch {
+        print("Error: \(error.localizedDescription)")
+        print(LocalLLMPostProcessingBenchmarkOptions.help)
+        exit(1)
+    }
+}
+
+func cmdTestFoundationModel(_ rawArgs: [String]) {
+    do {
+        let options = try FoundationModelBenchmarkOptions.parse(rawArgs)
+        if options.showHelp {
+            print(FoundationModelBenchmarkOptions.help)
+            return
+        }
+
+        #if canImport(FoundationModels)
+        if #available(macOS 26.0, *) {
+            let environment = FoundationModelBenchmarkRunner.environment(localeIdentifier: options.localeIdentifier)
+            print("Foundation Models benchmark")
+            print("Availability: \(environment.availabilityDescription)")
+            if let locale = environment.requestedLocaleIdentifier {
+                let supported = environment.requestedLocaleSupported == true ? "yes" : "no"
+                print("Requested locale: \(locale) (supported: \(supported))")
+            }
+            print("Supported languages: \(environment.supportedLanguageIdentifiers.joined(separator: ", "))")
+
+            if environment.supportedLanguageIdentifiers.allSatisfy({ !$0.hasPrefix("ru") }) {
+                print("Note: Russian is not advertised as a supported Foundation Models language on this system.")
+            }
+
+            let semaphore = DispatchSemaphore(value: 0)
+            var exitCode: Int32 = 0
+
+            Task {
+                defer { semaphore.signal() }
+                do {
+                    let report = try await FoundationModelBenchmarkRunner.run(options: options)
+                    let benchmarkCases = try options.benchmarkCases()
+                    print("Cases: \(benchmarkCases.count) × runs: \(options.runs)")
+                    print("Prewarm: \(options.prewarm ? "on" : "off")")
+                    print("")
+
+                    for result in report.results {
+                        print("[run \(result.runIndex)] \(result.benchmarkCase.name)")
+                        print("Input:    \(result.benchmarkCase.input)")
+                        if let expected = result.benchmarkCase.expected {
+                            print("Expected: \(expected)")
+                        }
+                        print("Output:   \(result.output)")
+                        print("TTFT:     \(formatSeconds(result.timeToFirstTokenSeconds))")
+                        print("Total:    \(formatSeconds(result.totalDurationSeconds))")
+                        if let exactMatch = result.exactMatch, let similarity = result.similarity {
+                            let similarityPercent = (similarity * 100).formatted(.number.precision(.fractionLength(1)))
+                            print("Quality:  exact=\(exactMatch ? "yes" : "no"), similarity=\(similarityPercent)%")
+                        }
+                        print("")
+                    }
+
+                    print("Summary")
+                    print("Average TTFT:  \(formatSeconds(report.averageTimeToFirstTokenSeconds))")
+                    print("Average total: \(formatSeconds(report.averageTotalDurationSeconds))")
+                    if report.scoredResults > 0 {
+                        print("Exact matches: \(report.exactMatches)/\(report.scoredResults)")
+                    }
+                    if let averageSimilarity = report.averageSimilarity {
+                        let similarityPercent = (averageSimilarity * 100).formatted(.number.precision(.fractionLength(1)))
+                        print("Avg similarity: \(similarityPercent)%")
+                    }
+                } catch {
+                    print("Error: \(error.localizedDescription)")
+                    exitCode = 1
+                }
+            }
+
+            semaphore.wait()
+            if exitCode != 0 {
+                exit(exitCode)
+            }
+            return
+        }
+        #endif
+
+        print("Foundation Models requires macOS 26 and Xcode 26 SDK.")
+        exit(1)
+    } catch {
+        print("Error: \(error.localizedDescription)")
+        print(FoundationModelBenchmarkOptions.help)
+        exit(1)
     }
 }
 
@@ -196,6 +424,10 @@ case "download-model":
     cmdDownloadModel(size)
 case "status":
     cmdStatus()
+case "test-foundation-model":
+    cmdTestFoundationModel(Array(userArgs.dropFirst()))
+case "test-local-llm":
+    cmdTestLocalLLM(Array(userArgs.dropFirst()))
 case "test-gigaam":
     let audioFile = args.count > 2 ? args[2] : nil
     let config = Config.load()

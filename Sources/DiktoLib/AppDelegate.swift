@@ -8,6 +8,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     var transcriber: Transcriber!
     var gigaamTranscriber: GigaAMTranscriber!
     var inserter: TextInserter!
+    var postProcessingProvider: any TextPostProcessingProvider = PassthroughTextPostProcessingProvider()
     // Streaming state for GigaAM live transcription
     private var streamingBuffer: [Float] = []
     private var streamingTimer: Timer?
@@ -52,6 +53,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
         gigaamTranscriber = GigaAMTranscriber(modelPath: config.gigaamPath)
+        postProcessingProvider = TextPostProcessingProviderFactory.make(config: config)
 
         await MainActor.run {
             self.statusBar.reprocessHandler = { [weak self] url in
@@ -155,6 +157,11 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             print("Model: \(config.modelSize)")
         }
+        print("Post-processing: \(postProcessingProvider.name)")
+        if config.effectivePostProcessingProvider == "local-llm" {
+            print("Post-processing model: \(config.postProcessingModelPath ?? config.effectivePostProcessingModelID)")
+            print("Post-processing timeout: \(config.effectivePostProcessingTimeoutMs) ms")
+        }
         print("Ready.")
     }
 
@@ -164,6 +171,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
         gigaamTranscriber = GigaAMTranscriber(modelPath: config.gigaamPath)
+        postProcessingProvider = TextPostProcessingProviderFactory.make(config: config)
 
         hotkeyManager?.stop()
         hotkeyManager = HotkeyManager(
@@ -383,7 +391,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     raw = try await self.transcriber.transcribe(audioURL: audioURL)
                 }
                 NSLog("[OW] Raw transcription: '%@'", raw)
-                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
+                let text = await self.postProcess(raw)
                 NSLog("[OW] Final text: '%@'", text)
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
@@ -471,6 +479,16 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func postProcess(_ text: String) async -> String {
+        let context = TextPostProcessingProviderFactory.context(config: config)
+        do {
+            return try await postProcessingProvider.process(text, context: context)
+        } catch {
+            NSLog("[OW] Post-processing error: %@", error.localizedDescription)
+            return text
+        }
+    }
+
     public func reprocess(audioURL: URL) {
         guard statusBar.state == .idle else { return }
 
@@ -485,7 +503,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 } else {
                     raw = try await self.transcriber.transcribe(audioURL: audioURL)
                 }
-                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
+                let text = await self.postProcess(raw)
                 await MainActor.run {
                     if !text.isEmpty {
                         self.lastTranscription = text

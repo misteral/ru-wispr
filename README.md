@@ -37,6 +37,40 @@ Edit `~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json` (synced 
 
 Then restart Dikto from the menu bar.
 
+### Experimental post-processing
+
+You can add a final local text cleanup layer before insertion. This is useful for fixing capitalization, punctuation, spelling, and mixed Russian/English product names after transcription.
+
+Example config:
+
+```json
+{
+  "postProcessingProvider": "local-llm",
+  "postProcessingModelID": "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+  "postProcessingMaxTokens": 96,
+  "postProcessingTimeoutMs": 1500
+}
+```
+
+Benchmark it from CLI:
+
+```bash
+.build/release/dikto test-local-llm --runs 3
+.build/release/dikto test-local-llm --text "сейчас мы тестируем исправление текста в xcode и github actions"
+```
+
+Compare multiple MLX candidates on a small dataset:
+
+```bash
+.build/release/dikto-eval --list-models
+.build/release/dikto-eval --filter Qwen --runs 1
+```
+
+Evaluation assets live in:
+- `eval/models/local-llm-candidates.json`
+- `eval/datasets/text-postprocessing-v1.jsonl`
+- `eval/results/`
+
 | Option | Default | Values |
 |---|---|---|
 | **hotkey** | `63` | Globe (`63`), Right Option (`61`), F5 (`96`), or any key code |
