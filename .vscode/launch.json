@@ -4,21 +4,21 @@
       "type": "swift",
       "request": "launch",
       "args": [],
-      "cwd": "${workspaceFolder:open-wispr}",
-      "name": "Debug open-wispr",
-      "target": "open-wispr",
+      "cwd": "${workspaceFolder:dikto}",
+      "name": "Debug dikto",
+      "target": "dikto",
       "configuration": "debug",
-      "preLaunchTask": "swift: Build Debug open-wispr"
+      "preLaunchTask": "swift: Build Debug dikto"
     },
     {
       "type": "swift",
       "request": "launch",
       "args": [],
-      "cwd": "${workspaceFolder:open-wispr}",
-      "name": "Release open-wispr",
-      "target": "open-wispr",
+      "cwd": "${workspaceFolder:dikto}",
+      "name": "Release dikto",
+      "target": "dikto",
       "configuration": "release",
-      "preLaunchTask": "swift: Build Release open-wispr"
+      "preLaunchTask": "swift: Build Release dikto"
     }
   ]
 }

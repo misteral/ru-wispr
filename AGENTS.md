@@ -1,6 +1,6 @@
 # AGENTS.md
 
-RuWispr — local, privacy-focused voice dictation for macOS. Push-to-talk records audio, transcribes on-device (Whisper via whisper-cpp or GigaAM via MLX), and pastes text at the cursor. No cloud dependencies — everything runs on Apple Silicon.
+Dikto — local, privacy-focused voice dictation for macOS. Push-to-talk records audio, transcribes on-device (Whisper via whisper-cpp or GigaAM via MLX), and pastes text at the cursor. No cloud dependencies — everything runs on Apple Silicon.
 
 This file is a map. Full documentation lives in `docs/`. Read the relevant doc before starting any task.
 
@@ -41,4 +41,4 @@ If the user did not give a concrete task: read `README.md` and `docs/ARCHITECTUR
 - **Apple Silicon only** — no Intel fallbacks, no x86 code paths.
 - **Test before committing** — run `swift test` at minimum. For CLI/script changes, also run `bash scripts/test-install.sh`.
 - **No secrets in code** — signing identity and notarization credentials via env vars only.
-- **New pure logic → unit test** in `Tests/RuWisperTests/`. New CLI commands → assertions in `scripts/test-install.sh`. New scripts → add to shellcheck list.
+- **New pure logic → unit test** in `Tests/DiktoTests/`. New CLI commands → assertions in `scripts/test-install.sh`. New scripts → add to shellcheck list.

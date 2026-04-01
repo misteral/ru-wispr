@@ -1,19 +1,62 @@
 #!/bin/bash
-# Build ru-wisper with MLX Metal support and install to /Applications
-set -e
+# Build dikto with MLX Metal support and install to /Applications
+set -euo pipefail
 
 VERSION="1.0.0"
 BUILD_DIR="$(pwd)/.build/xcode"
+BUILD_LOG="$BUILD_DIR/xcodebuild.log"
+
+check_xcode_build_prereqs() {
+    local dev_dir metal_component_status
+
+    if ! xcodebuild -version >/dev/null 2>&1; then
+        echo "Error: xcodebuild is not available. Install Xcode and select it with:"
+        echo "  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+        exit 1
+    fi
+
+    dev_dir="$(xcode-select -p 2>/dev/null || true)"
+    if [ "$dev_dir" = "/Library/Developer/CommandLineTools" ]; then
+        echo "Error: xcodebuild is pointing at Command Line Tools, not full Xcode. Run:"
+        echo "  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+        exit 1
+    fi
+
+    metal_component_status="$(xcodebuild -showComponent MetalToolchain 2>/dev/null || true)"
+    if echo "$metal_component_status" | grep -q "Status: uninstalled"; then
+        echo "Error: Xcode Metal Toolchain is not installed. Run:"
+        echo "  xcodebuild -downloadComponent MetalToolchain"
+        exit 1
+    fi
+}
+
+mkdir -p "$BUILD_DIR"
+check_xcode_build_prereqs
 
 echo "==> Building with xcodebuild (compiles Metal shaders)..."
 # Use project-local derivedDataPath for deterministic output
-xcodebuild -scheme ru-wisper -configuration Release \
+if ! xcodebuild -scheme dikto -configuration Release \
     -destination "platform=macOS" \
     -derivedDataPath "$BUILD_DIR" \
-    build 2>&1 | tail -3
+    build >"$BUILD_LOG" 2>&1; then
+    tail -40 "$BUILD_LOG"
+    echo ""
+    if grep -q "missing Metal Toolchain" "$BUILD_LOG"; then
+        echo "Error: Xcode Metal Toolchain is not installed. Run:"
+        echo "  xcodebuild -downloadComponent MetalToolchain"
+    elif grep -q "requires Xcode, but active developer directory '/Library/Developer/CommandLineTools'" "$BUILD_LOG"; then
+        echo "Error: xcodebuild is pointing at Command Line Tools, not full Xcode. Run:"
+        echo "  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+    else
+        echo "Error: xcodebuild failed. Full log: $BUILD_LOG"
+    fi
+    exit 1
+fi
+
+tail -3 "$BUILD_LOG"
 
 PRODUCTS="$BUILD_DIR/Build/Products/Release"
-DERIVED="$PRODUCTS/ru-wisper"
+DERIVED="$PRODUCTS/dikto"
 METALLIB_BUNDLE="$PRODUCTS/mlx-swift_Cmlx.bundle"
 METALLIB="$METALLIB_BUNDLE/Contents/Resources/default.metallib"
 
@@ -30,22 +73,22 @@ if [ "$BINARY_AGE" -gt 60 ]; then
     echo "    Continuing anyway..."
 fi
 
-echo "==> Installing to /Applications/RuWisper.app..."
+echo "==> Installing to /Applications/Dikto.app..."
 
-APP_DIR="/Applications/RuWisper.app"
+APP_DIR="/Applications/Dikto.app"
 CONTENTS="$APP_DIR/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 
 # Force remove the app from TCC (Privacy & Security) database to reset permissions
 # (This doesn't always work perfectly without sudo, but helps sometimes)
-tccutil reset All co.itbeaver.ru-wisper 2>/dev/null || true
+tccutil reset All co.itbeaver.dikto 2>/dev/null || true
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS" "$RESOURCES"
 
 # Binary + Metal library (place in both MacOS/ and Resources/ for MLX discovery)
-cp "$DERIVED" "$MACOS/ru-wisper"
+cp "$DERIVED" "$MACOS/dikto"
 cp "$METALLIB" "$MACOS/mlx.metallib"
 cp -R "$METALLIB_BUNDLE" "$MACOS/"
 cp -R "$METALLIB_BUNDLE" "$RESOURCES/"
@@ -58,7 +101,7 @@ fi
 
 # GigaAM RNNT model — bundle if available
 PROJECT_GIGAAM_MODEL="$(pwd)/Resources/gigaam-v3-rnnt-mlx"
-APP_SUPPORT_GIGAAM_MODEL="$HOME/Library/Application Support/RuWispr/models/gigaam-v3-rnnt-mlx"
+APP_SUPPORT_GIGAAM_MODEL="$HOME/Library/Application Support/Dikto/models/gigaam-v3-rnnt-mlx"
 LEGACY_GIGAAM_MODEL="$HOME/.config/ru-wisper/models/gigaam-v3-rnnt-mlx"
 
 if [ -n "${GIGAAM_MODEL:-}" ]; then
@@ -91,13 +134,13 @@ cat > "$CONTENTS/Info.plist" << PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>ru-wisper</string>
+    <string>dikto</string>
     <key>CFBundleIdentifier</key>
-    <string>co.itbeaver.ru-wisper</string>
+    <string>co.itbeaver.dikto</string>
     <key>CFBundleName</key>
-    <string>RuWisper</string>
+    <string>Dikto</string>
     <key>CFBundleDisplayName</key>
-    <string>RuWisper</string>
+    <string>Dikto</string>
     <key>CFBundleVersion</key>
     <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>
@@ -111,19 +154,19 @@ cat > "$CONTENTS/Info.plist" << PLIST
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>RuWisper needs microphone access to record speech for transcription.</string>
+    <string>Dikto needs microphone access to record speech for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>RuWisper needs accessibility access to insert transcribed text.</string>
+    <string>Dikto needs accessibility access to insert transcribed text.</string>
 </dict>
 </plist>
 PLIST
 
 echo "==> Code signing..."
-codesign --force --deep --sign - --identifier co.itbeaver.ru-wisper "$APP_DIR"
+codesign --force --deep --sign - --identifier co.itbeaver.dikto "$APP_DIR"
 
 echo ""
-echo "✅ Installed: /Applications/RuWisper.app"
+echo "✅ Installed: /Applications/Dikto.app"
 du -sh "$APP_DIR"
 echo ""
-echo "Launch: open /Applications/RuWisper.app"
-echo "CLI:    /Applications/RuWisper.app/Contents/MacOS/ru-wisper status"
+echo "Launch: open /Applications/Dikto.app"
+echo "CLI:    /Applications/Dikto.app/Contents/MacOS/dikto status"

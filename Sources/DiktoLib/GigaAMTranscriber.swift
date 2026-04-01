@@ -51,7 +51,7 @@ public class GigaAMTranscriber {
     // MLX keeps freed Metal buffers in a cache for reuse. That cache defaults
     // to the full memory limit, which allows resident memory to grow into
     // multi-GB territory during repeated inference with varying audio lengths.
-    // RuWispr is latency-sensitive but not throughput-bound, so a much smaller
+    // Dikto is latency-sensitive but not throughput-bound, so a much smaller
     // cache keeps memory stable without hurting UX.
     private static let minimumCacheLimitBytes = 64 * 1024 * 1024
     private static let maximumCacheLimitBytes = 256 * 1024 * 1024
@@ -60,7 +60,7 @@ public class GigaAMTranscriber {
 
     /// Default model directory (search order):
     /// 1. App bundle: Contents/Resources/gigaam-v3-rnnt-mlx/
-    /// 2. User data: ~/Library/Application Support/RuWispr/models/gigaam-v3-rnnt-mlx/
+    /// 2. User data: ~/Library/Application Support/Dikto/models/gigaam-v3-rnnt-mlx/
     public static let defaultModelDir: URL = {
         // 1. Resolve via executable path: .app/Contents/MacOS/binary → .app/Contents/Resources/
         let execPath = ProcessInfo.processInfo.arguments[0]

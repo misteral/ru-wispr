@@ -2,7 +2,7 @@
 
 ## Privacy Model
 
-RuWispr is completely local. No audio or text ever leaves the machine.
+Dikto is completely local. No audio or text ever leaves the machine.
 
 - Audio is recorded to a temp file, transcribed on CPU/GPU, temp file deleted
 - No network requests except model download on first run

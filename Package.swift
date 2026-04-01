@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ru-wisper",
+    name: "dikto",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.21.0"),
@@ -10,14 +10,14 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "RuWisperLib",
+            name: "DiktoLib",
             dependencies: [
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXNN", package: "mlx-swift"),
                 .product(name: "MLXFFT", package: "mlx-swift"),
                 .product(name: "DynamicNotchKit", package: "DynamicNotchKit"),
             ],
-            path: "Sources/RuWisperLib",
+            path: "Sources/DiktoLib",
             linkerSettings: [
                 .linkedFramework("CoreAudio"),
                 .linkedFramework("AVFoundation"),
@@ -25,14 +25,14 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "ru-wisper",
-            dependencies: ["RuWisperLib"],
-            path: "Sources/RuWisper"
+            name: "dikto",
+            dependencies: ["DiktoLib"],
+            path: "Sources/Dikto"
         ),
         .testTarget(
-            name: "RuWisperTests",
-            dependencies: ["RuWisperLib"],
-            path: "Tests/RuWisperTests"
+            name: "DiktoTests",
+            dependencies: ["DiktoLib"],
+            path: "Tests/DiktoTests"
         ),
     ],
     swiftLanguageModes: [.v5]

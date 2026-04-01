@@ -11,7 +11,7 @@ The dev script handles:
 1. **Configure** — prompts for Whisper model size, language, spoken punctuation, hotkey
 2. **Clean up** — stops running instances, removes Homebrew version if present
 3. **Build** — `swift build -c release`
-4. **Bundle** — packages into `RuWispr.app`, copies to `~/Applications/`
+4. **Bundle** — packages into `Dikto.app`, copies to `~/Applications/`
 5. **Start** — launches the app for testing
 
 ## PR Workflow
@@ -42,7 +42,7 @@ CI runs automatically on PRs (see [TESTING.md](TESTING.md) for CI details).
 
 ## Guidelines
 
-- Keep it simple — RuWispr is intentionally minimal
+- Keep it simple — Dikto is intentionally minimal
 - No cloud dependencies — everything must run on-device
 - Test on Apple Silicon (Intel not supported)
 - Match the existing code style

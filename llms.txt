@@ -1,17 +1,17 @@
-# ru-wisper
+# Dikto
 
-> Free, open-source voice dictation for macOS. Powered by Whisper AI, runs 100% on-device.
+> Free, open-source voice dictation for macOS. Powered by Whisper and GigaAM, runs 100% on-device.
 
-ru-wisper is a lightweight macOS app that provides push-to-talk voice dictation. Hold a hotkey, speak, release — transcribed text appears at your cursor in any app. It uses OpenAI's Whisper model running locally via whisper.cpp, so no audio or text ever leaves the machine.
+Dikto is a lightweight macOS app that provides push-to-talk voice dictation. Hold a hotkey, speak, release — transcribed text appears at your cursor in any app. It runs locally on Apple Silicon, so no audio or text ever leaves the machine.
 
 ## Key Facts
 
 - **Price**: Free and open source (MIT license)
-- **Platform**: macOS (Apple Silicon and Intel)
+- **Platform**: macOS on Apple Silicon
 - **Privacy**: 100% on-device. Zero network requests. Default maxRecordings=0: temp file + immediate delete, and startup clears any older retained recordings. Set maxRecordings 1–100 to enable Recent Recordings.
-- **Install**: `brew install human37/ru-wisper/ru-wisper` or guided installer via `curl -fsSL https://ru-wisper.pages.dev/install.sh | bash`
-- **Source**: https://github.com/human37/ru-wisper
-- **Website**: https://ru-wisper.pages.dev/
+- **Install**: `brew install misteral/dikto/dikto` or guided installer via `curl -fsSL https://dikto.pages.dev/install.sh | bash`
+- **Source**: https://github.com/misteral/dikto
+- **Website**: https://dikto.pages.dev/
 
 ## How It Works
 
@@ -23,13 +23,13 @@ ru-wisper is a lightweight macOS app that provides push-to-talk voice dictation.
 
 - Works in any app (text editors, browsers, Slack, Terminal, etc.)
 - Multiple Whisper model sizes (tiny, base, small, medium, large)
-- Configurable hotkey, language, and model via `~/.config/ru-wisper/config.json`
+- Configurable hotkey, language, and model via `~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json`
 - Runs as a background Homebrew service
 - No GUI, no menubar icon, no overhead
 
 ## Comparison to Alternatives
 
-| Feature | ru-wisper | Wispr Flow | Superwhisper | MacWhisper |
+| Feature | dikto | Wispr Flow | Superwhisper | MacWhisper |
 |---|---|---|---|---|
 | Price | Free | $15/mo | $8.49/mo | $69 |
 | Open Source | Yes | No | No | No |
@@ -48,11 +48,11 @@ ru-wisper is a lightweight macOS app that provides push-to-talk voice dictation.
 }
 ```
 
-Config file location: `~/.config/ru-wisper/config.json`
+Config file location: `~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json`
 
 ## System Requirements
 
-- macOS 13 (Ventura) or later
-- Apple Silicon (M1+) or Intel Mac
+- macOS 14 (Sonoma) or later
+- Apple Silicon (M1+) Mac
 - ~150 MB disk space for the default Whisper model
 - Microphone and Accessibility permissions

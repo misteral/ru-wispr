@@ -2,7 +2,7 @@
 
 ## Overview
 
-RuWispr is a local voice dictation app for macOS. Push-to-talk records audio, transcribes it on-device, and pastes text at the cursor. No cloud dependencies — everything runs locally on Apple Silicon.
+Dikto is a local voice dictation app for macOS. Push-to-talk records audio, transcribes it on-device, and pastes text at the cursor. No cloud dependencies — everything runs locally on Apple Silicon.
 
 **Core flow:** hotkey press → `AudioRecorder` captures 16kHz mono → transcription engine → `TextPostProcessor` (spoken punctuation) → `TextInserter` (paste at cursor via Cmd+V simulation)
 
@@ -10,11 +10,11 @@ RuWispr is a local voice dictation app for macOS. Push-to-talk records audio, tr
 
 | Target | Path | Description |
 |---|---|---|
-| `RuWisperLib` | `Sources/RuWisperLib/` | Core library — audio, transcription, UI, config |
-| `ru-wisper` | `Sources/RuWisper/` | CLI entry point (`main.swift`) |
-| `RuWisperTests` | `Tests/RuWisperTests/` | Unit tests for the library |
+| `DiktoLib` | `Sources/DiktoLib/` | Core library — audio, transcription, UI, config |
+| `dikto` | `Sources/Dikto/` | CLI entry point (`main.swift`) |
+| `DiktoTests` | `Tests/DiktoTests/` | Unit tests for the library |
 
-### RuWisperLib Components
+### DiktoLib Components
 
 | File | Responsibility |
 |---|---|
@@ -28,7 +28,7 @@ RuWispr is a local voice dictation app for macOS. Push-to-talk records audio, tr
 | `GigaAM/GigaAMConfig.swift` | GigaAM model configuration |
 | `TextPostProcessor.swift` | Spoken punctuation replacement and text cleanup |
 | `TextInserter.swift` | Pasteboard save/restore + simulated Cmd+V keystroke |
-| `Config.swift` | JSON config in iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json`); `FlexBool` (accepts bool/string/int); auto-migrates from legacy `~/.config/ru-wisper/` |
+| `Config.swift` | JSON config in iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json`); `FlexBool` (accepts bool/string/int); auto-migrates from legacy RuWispr paths |
 | `ModelDownloader.swift` | Whisper model download from HuggingFace |
 | `StatusBarController.swift` | Menu bar icon, animation, recording list |
 | `StreamingOverlay.swift` | Glassmorphism HUD for real-time transcription feedback |
@@ -57,14 +57,14 @@ Two engines, switchable via config:
 
 ## Dependency Rules
 
-- `ru-wisper` (CLI) depends on `RuWisperLib` only
-- `RuWisperLib` external deps: `mlx-swift` (MLX, MLXNN, MLXFFT), `DynamicNotchKit`
+- `dikto` (CLI) depends on `DiktoLib` only
+- `DiktoLib` external deps: `mlx-swift` (MLX, MLXNN, MLXFFT), `DynamicNotchKit`
 - Linked frameworks: CoreAudio, AVFoundation, AppKit
 - External tool: `whisper-cpp` (Homebrew) — runtime dependency for Whisper engine only
 
 ## CLI Subcommands
 
-Entry point: `Sources/RuWisper/main.swift`
+Entry point: `Sources/Dikto/main.swift`
 
 | Command | Description |
 |---|---|

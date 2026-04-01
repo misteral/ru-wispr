@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="logo.svg" width="80" alt="RuWispr logo">
+  <img src="logo.svg" width="80" alt="Dikto logo">
 </p>
 
-<h1 align="center">RuWispr</h1>
+<h1 align="center">Dikto</h1>
 
 <p align="center">
   Local, private voice dictation for macOS. Hold a key, speak, release — your words appear at the cursor.<br>
@@ -13,7 +13,7 @@
 
 ## Install
 
-Download the latest DMG from [Releases](https://github.com/ABorovenskoy/ru-wispr/releases), open it, and drag RuWispr to Applications.
+Download the latest DMG from [Releases](https://github.com/misteral/dikto/releases), open it, and drag Dikto to Applications.
 
 A waveform icon appears in your menu bar when it's running.
 
@@ -23,7 +23,7 @@ The default hotkey is the **Globe key** (🌐, bottom-left). Hold it, speak, rel
 
 ## Configuration
 
-Edit `~/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json` (synced via iCloud Drive):
+Edit `~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json` (synced via iCloud Drive):
 
 ```json
 {
@@ -35,7 +35,7 @@ Edit `~/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json` (synce
 }
 ```
 
-Then restart RuWispr from the menu bar.
+Then restart Dikto from the menu bar.
 
 | Option | Default | Values |
 |---|---|---|
@@ -84,7 +84,7 @@ Click the menu bar icon to access **Copy Last Dictation** — recovers your most
 
 ## Compare
 
-| | RuWispr | VoiceInk | Wispr Flow | Superwhisper | Apple Dictation |
+| | Dikto | VoiceInk | Wispr Flow | Superwhisper | Apple Dictation |
 |---|---|---|---|---|---|
 | **Price** | **Free** | $39.99 | $15/mo | $8.49/mo | Free |
 | **Open source** | MIT | GPLv3 | No | No | No |
@@ -95,21 +95,26 @@ Click the menu bar icon to access **Copy Last Dictation** — recovers your most
 
 ## Privacy
 
-RuWispr is completely local. Audio is recorded to a temp file, transcribed by whisper.cpp or GigaAM on your CPU/GPU, and the temp file is deleted. No network requests are made except to download models on first run. Optionally, you can configure RuWispr to store a number of past recordings locally via the `maxRecordings` setting. Those recordings stay private and on your machine, and we default to not storing anything.
+Dikto is completely local. Audio is recorded to a temp file, transcribed by whisper.cpp or GigaAM on your CPU/GPU, and the temp file is deleted. No network requests are made except to download models on first run. Optionally, you can configure Dikto to store a number of past recordings locally via the `maxRecordings` setting. Those recordings stay private and on your machine, and we default to not storing anything.
 
 ## Build from source
 
 ```bash
-git clone https://github.com/ABorovenskoy/ru-wispr.git
-cd ru-wispr
+git clone https://github.com/misteral/dikto.git
+cd dikto
 brew install whisper-cpp
 swift build -c release
-.build/release/open-wispr start
+.build/release/dikto start
+
+# Full app bundle with Metal shaders (requires full Xcode)
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+xcodebuild -downloadComponent MetalToolchain
+bash build.sh
 ```
 
 ## Support
 
-RuWispr is free and always will be.
+Dikto is free and always will be.
 
 ## License
 

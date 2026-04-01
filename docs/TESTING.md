@@ -10,8 +10,8 @@ swift test
 
 Run a single test:
 ```bash
-swift test --filter RuWisperTests.ConfigTests
-swift test --filter RuWisperTests.ConfigTests/testFlexBoolDecoding
+swift test --filter DiktoTests.ConfigTests
+swift test --filter DiktoTests.ConfigTests/testFlexBoolDecoding
 ```
 
 ### Integration Tests
@@ -27,7 +27,7 @@ bash scripts/test-transcription.sh
 
 ## Test Structure
 
-### Unit Tests (`Tests/RuWisperTests/`)
+### Unit Tests (`Tests/DiktoTests/`)
 
 Pure logic tests with no external dependencies.
 
@@ -68,7 +68,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on PRs to `main`. Four parallel
 ## Writing Tests
 
 ### When to add unit tests
-- New pure logic (parsing, transformations, config handling) → `Tests/RuWisperTests/`
+- New pure logic (parsing, transformations, config handling) → `Tests/DiktoTests/`
 - Good candidates: pure functions, data transformations, anything without hardware (microphone, display, accessibility)
 
 ### When to add integration tests

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Build, sign, notarize, and package RuWisper for distribution
+# Build, sign, notarize, and package Dikto for distribution
 set -euo pipefail
 
 VERSION="1.0.0"
-APP_NAME="RuWisper"
-BUNDLE_ID="co.itbeaver.ru-wisper"
+APP_NAME="Dikto"
+BUNDLE_ID="co.itbeaver.dikto"
 SIGNING_IDENTITY="Developer ID Application: Aleksandr Bobrov (8HR3ZJZ5MZ)"
 TEAM_ID="8HR3ZJZ5MZ"
 
@@ -16,6 +16,8 @@ APPLE_ID="${APPLE_ID:-}"
 APP_PASSWORD="${APP_PASSWORD:-}"
 
 BUILD_DIR="$(pwd)/dist"
+DERIVED_DATA="$(pwd)/.build/xcode-release"
+BUILD_LOG="$BUILD_DIR/xcodebuild.log"
 APP_DIR="$BUILD_DIR/$APP_NAME.app"
 DMG_PATH="$BUILD_DIR/$APP_NAME-$VERSION.dmg"
 
@@ -29,6 +31,24 @@ step() { echo -e "\n${GREEN}==> $1${NC}"; }
 warn() { echo -e "${YELLOW}⚠  $1${NC}"; }
 fail() { echo -e "${RED}✗  $1${NC}"; exit 1; }
 
+check_xcode_build_prereqs() {
+    local dev_dir metal_component_status
+
+    if ! xcodebuild -version >/dev/null 2>&1; then
+        fail "xcodebuild is not available. Install Xcode and select it with: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+    fi
+
+    dev_dir="$(xcode-select -p 2>/dev/null || true)"
+    if [ "$dev_dir" = "/Library/Developer/CommandLineTools" ]; then
+        fail "xcodebuild is pointing at Command Line Tools, not full Xcode. Run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+    fi
+
+    metal_component_status="$(xcodebuild -showComponent MetalToolchain 2>/dev/null || true)"
+    if echo "$metal_component_status" | grep -q "Status: uninstalled"; then
+        fail "Xcode Metal Toolchain is not installed. Run: xcodebuild -downloadComponent MetalToolchain"
+    fi
+}
+
 # --- Verify signing identity ---
 step "Checking signing identity..."
 if ! security find-identity -v -p codesigning | grep -q "$SIGNING_IDENTITY"; then
@@ -37,14 +57,35 @@ fi
 echo "Found: $SIGNING_IDENTITY"
 
 # --- Build ---
+check_xcode_build_prereqs
+mkdir -p "$BUILD_DIR"
+rm -rf "$DERIVED_DATA"
+
 step "Building with xcodebuild (Release + Metal shaders)..."
-xcodebuild -scheme ru-wisper -configuration Release -destination "platform=macOS" build -quiet 2>/dev/null
+if ! xcodebuild -scheme dikto -configuration Release \
+    -destination "platform=macOS" \
+    -derivedDataPath "$DERIVED_DATA" \
+    build >"$BUILD_LOG" 2>&1; then
+    tail -40 "$BUILD_LOG"
+    echo ""
+    if grep -q "missing Metal Toolchain" "$BUILD_LOG"; then
+        fail "Xcode Metal Toolchain is not installed. Run: xcodebuild -downloadComponent MetalToolchain"
+    elif grep -q "requires Xcode, but active developer directory '/Library/Developer/CommandLineTools'" "$BUILD_LOG"; then
+        fail "xcodebuild is pointing at Command Line Tools, not full Xcode. Run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+    else
+        fail "xcodebuild failed. Full log: $BUILD_LOG"
+    fi
+fi
 
-BINARY=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "ru-wisper" -not -path "*.dSYM*" -maxdepth 1 2>/dev/null | head -1)
-METALLIB_BUNDLE=$(find ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release -name "mlx-swift_Cmlx.bundle" -maxdepth 1 2>/dev/null | head -1)
+tail -3 "$BUILD_LOG"
 
-if [ -z "$BINARY" ] || [ -z "$METALLIB_BUNDLE" ]; then
-    fail "Build artifacts not found. Check xcodebuild output."
+PRODUCTS="$DERIVED_DATA/Build/Products/Release"
+BINARY="$PRODUCTS/dikto"
+METALLIB_BUNDLE="$PRODUCTS/mlx-swift_Cmlx.bundle"
+METALLIB="$METALLIB_BUNDLE/Contents/Resources/default.metallib"
+
+if [ ! -f "$BINARY" ] || [ ! -f "$METALLIB" ]; then
+    fail "Build artifacts not found in $PRODUCTS"
 fi
 echo "Binary: $BINARY"
 echo "Metal:  $METALLIB_BUNDLE"
@@ -55,14 +96,13 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
 # Binary
-cp "$BINARY" "$APP_DIR/Contents/MacOS/ru-wisper"
+cp "$BINARY" "$APP_DIR/Contents/MacOS/dikto"
 
 # Metal library — MLX searches in multiple locations:
 #   1. <binary_dir>/mlx.metallib (colocated with binary)
 #   2. Bundle.main.resourceURL (Contents/Resources/)
 #   3. SwiftPM bundle via allBundles
 # Place in both MacOS/ (colocated) and Resources/ (bundle search) for reliability
-METALLIB="$METALLIB_BUNDLE/Contents/Resources/default.metallib"
 cp "$METALLIB" "$APP_DIR/Contents/MacOS/mlx.metallib"
 cp -R "$METALLIB_BUNDLE" "$APP_DIR/Contents/MacOS/"
 cp -R "$METALLIB_BUNDLE" "$APP_DIR/Contents/Resources/"
@@ -74,7 +114,7 @@ if [ -d "Resources/Audio" ]; then
 fi
 
 # GigaAM RNNT model — bundle for distribution
-GIGAAM_MODEL="${GIGAAM_MODEL:-$HOME/Library/Application Support/RuWispr/models/gigaam-v3-rnnt-mlx}"
+GIGAAM_MODEL="${GIGAAM_MODEL:-$HOME/Library/Application Support/Dikto/models/gigaam-v3-rnnt-mlx}"
 if [ -f "$GIGAAM_MODEL/config.json" ] && [ -f "$GIGAAM_MODEL/model.safetensors" ]; then
     step "Bundling GigaAM RNNT model..."
     cp -R "$GIGAAM_MODEL" "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
@@ -92,7 +132,7 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>ru-wisper</string>
+    <string>dikto</string>
     <key>CFBundleIdentifier</key>
     <string>${BUNDLE_ID}</string>
     <key>CFBundleName</key>
@@ -112,9 +152,9 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>RuWisper needs microphone access to record speech for transcription.</string>
+    <string>Dikto needs microphone access to record speech for transcription.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>RuWisper needs accessibility access to insert transcribed text.</string>
+    <string>Dikto needs accessibility access to insert transcribed text.</string>
 </dict>
 </plist>
 PLIST
@@ -142,11 +182,11 @@ codesign --force --options runtime --timestamp \
     "$APP_DIR/Contents/MacOS/mlx-swift_Cmlx.bundle"
 
 # Sign the main binary (with entitlements for Hardened Runtime)
-ENTITLEMENTS="$(cd "$(dirname "$0")/.." && pwd)/RuWisper.entitlements"
+ENTITLEMENTS="$(cd "$(dirname "$0")/.." && pwd)/Dikto.entitlements"
 codesign --force --options runtime --timestamp \
     --sign "$SIGNING_IDENTITY" \
     --entitlements "$ENTITLEMENTS" \
-    "$APP_DIR/Contents/MacOS/ru-wisper"
+    "$APP_DIR/Contents/MacOS/dikto"
 
 # Sign the entire app
 codesign --force --options runtime --timestamp \

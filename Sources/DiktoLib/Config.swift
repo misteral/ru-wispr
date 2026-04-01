@@ -48,73 +48,95 @@ public struct Config: Codable {
     /// Config directory in iCloud Drive (syncs across devices)
     public static var configDir: URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        return home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/RuWispr")
+        return home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Dikto")
     }
 
     /// Local data directory for models, recordings, and other large files
     public static var dataDir: URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        return home.appendingPathComponent("Library/Application Support/RuWispr")
+        return home.appendingPathComponent("Library/Application Support/Dikto")
     }
 
-    /// Legacy config directory (pre-iCloud migration)
-    private static var legacyConfigDir: URL {
+    private static var legacyConfigDirs: [URL] {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        return home.appendingPathComponent(".config/ru-wisper")
+        return [
+            home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/RuWispr"),
+            home.appendingPathComponent(".config/ru-wisper"),
+            home.appendingPathComponent(".config/dikto"),
+        ]
+    }
+
+    private static var legacyDataDirs: [URL] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return [
+            home.appendingPathComponent("Library/Application Support/RuWispr"),
+            home.appendingPathComponent(".config/ru-wisper"),
+            home.appendingPathComponent(".config/dikto"),
+        ]
     }
 
     public static var configFile: URL {
         configDir.appendingPathComponent("config.json")
     }
 
-    /// Migrate config from legacy ~/.config/ru-wisper/ to iCloud Drive and data to Application Support
-    public static func migrateIfNeeded() {
+    private static func migrateItem(
+        from legacyDirs: [URL],
+        relativePath: String,
+        to destination: URL,
+        destinationParent: URL,
+        label: String
+    ) {
         let fm = FileManager.default
-        let legacyDir = legacyConfigDir
+        guard !fm.fileExists(atPath: destination.path) else { return }
 
-        guard fm.fileExists(atPath: legacyDir.path) else { return }
+        for legacyDir in legacyDirs {
+            let source = legacyDir.appendingPathComponent(relativePath)
+            guard fm.fileExists(atPath: source.path) else { continue }
 
-        // Migrate config.json to iCloud Drive
-        let legacyConfig = legacyDir.appendingPathComponent("config.json")
-        if fm.fileExists(atPath: legacyConfig.path) && !fm.fileExists(atPath: configFile.path) {
             do {
-                try fm.createDirectory(at: configDir, withIntermediateDirectories: true)
-                try fm.moveItem(at: legacyConfig, to: configFile)
-                fputs("Migrated config to iCloud Drive: \(configFile.path)\n", stderr)
+                try fm.createDirectory(at: destinationParent, withIntermediateDirectories: true)
+                try fm.moveItem(at: source, to: destination)
+                fputs("Migrated \(label) to: \(destination.path)\n", stderr)
+                return
             } catch {
-                fputs("Warning: could not migrate config: \(error.localizedDescription)\n", stderr)
+                fputs("Warning: could not migrate \(label) from \(source.path): \(error.localizedDescription)\n", stderr)
             }
         }
+    }
 
-        // Migrate models/ and recordings/ to Application Support
-        let legacyModels = legacyDir.appendingPathComponent("models")
-        let newModels = dataDir.appendingPathComponent("models")
-        if fm.fileExists(atPath: legacyModels.path) && !fm.fileExists(atPath: newModels.path) {
-            do {
-                try fm.createDirectory(at: dataDir, withIntermediateDirectories: true)
-                try fm.moveItem(at: legacyModels, to: newModels)
-                fputs("Migrated models to: \(newModels.path)\n", stderr)
-            } catch {
-                fputs("Warning: could not migrate models: \(error.localizedDescription)\n", stderr)
-            }
-        }
+    /// Migrate from previous RuWispr paths and legacy ~/.config installs into Dikto paths.
+    public static func migrateIfNeeded() {
+        migrateItem(
+            from: legacyConfigDirs,
+            relativePath: "config.json",
+            to: configFile,
+            destinationParent: configDir,
+            label: "config"
+        )
 
-        let legacyRecordings = legacyDir.appendingPathComponent("recordings")
-        let newRecordings = dataDir.appendingPathComponent("recordings")
-        if fm.fileExists(atPath: legacyRecordings.path) && !fm.fileExists(atPath: newRecordings.path) {
-            do {
-                try fm.createDirectory(at: dataDir, withIntermediateDirectories: true)
-                try fm.moveItem(at: legacyRecordings, to: newRecordings)
-                fputs("Migrated recordings to: \(newRecordings.path)\n", stderr)
-            } catch {
-                fputs("Warning: could not migrate recordings: \(error.localizedDescription)\n", stderr)
-            }
-        }
+        migrateItem(
+            from: legacyDataDirs,
+            relativePath: "models",
+            to: dataDir.appendingPathComponent("models"),
+            destinationParent: dataDir,
+            label: "models"
+        )
 
-        // Remove legacy dir if empty
-        if let contents = try? fm.contentsOfDirectory(atPath: legacyDir.path), contents.isEmpty {
+        migrateItem(
+            from: legacyDataDirs,
+            relativePath: "recordings",
+            to: dataDir.appendingPathComponent("recordings"),
+            destinationParent: dataDir,
+            label: "recordings"
+        )
+
+        let fm = FileManager.default
+        let legacyDirs = Array(Set((legacyConfigDirs + legacyDataDirs).map(\.path))).map(URL.init(fileURLWithPath:))
+        for legacyDir in legacyDirs {
+            guard fm.fileExists(atPath: legacyDir.path) else { continue }
+            guard let contents = try? fm.contentsOfDirectory(atPath: legacyDir.path), contents.isEmpty else { continue }
             try? fm.removeItem(at: legacyDir)
-            fputs("Removed empty legacy config dir: \(legacyDir.path)\n", stderr)
+            fputs("Removed empty legacy dir: \(legacyDir.path)\n", stderr)
         }
     }
 

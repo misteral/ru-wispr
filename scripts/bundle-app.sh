@@ -1,15 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-BINARY="${1:-.build/release/ru-wisper}"
-APP_DIR="${2:-RuWisper.app}"
+BINARY="${1:-.build/release/dikto}"
+APP_DIR="${2:-Dikto.app}"
 VERSION="${3:-0.3.0}"
 
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS"
 mkdir -p "$APP_DIR/Contents/Resources"
 
-cp "$BINARY" "$APP_DIR/Contents/MacOS/ru-wisper"
+cp "$BINARY" "$APP_DIR/Contents/MacOS/dikto"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -29,13 +29,13 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>ru-wisper</string>
+    <string>dikto</string>
     <key>CFBundleIdentifier</key>
-    <string>co.itbeaver.ru-wisper</string>
+    <string>co.itbeaver.dikto</string>
     <key>CFBundleName</key>
-    <string>RuWisper</string>
+    <string>Dikto</string>
     <key>CFBundleDisplayName</key>
-    <string>RuWisper</string>
+    <string>Dikto</string>
     <key>CFBundleVersion</key>
     <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>
@@ -49,11 +49,11 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <key>LSUIElement</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>RuWisper needs microphone access to record speech for transcription.</string>
+    <string>Dikto needs microphone access to record speech for transcription.</string>
 </dict>
 </plist>
 PLIST
 
-codesign --force --sign - --identifier co.itbeaver.ru-wisper "$APP_DIR"
+codesign --force --sign - --identifier co.itbeaver.dikto "$APP_DIR"
 
 echo "Built $APP_DIR"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="human37/ru-wisper"
+REPO="misteral/dikto"
 W=60
 
 bar() {
@@ -138,7 +138,7 @@ fi
 declare -a pp_paths=() pp_counts=()
 pp_max=0
 while IFS=' ' read -r path count; do
-  short="${path#/human37/ru-wisper}"
+  short="${path#/misteral/dikto}"
   [ -z "$short" ] && short="/"
   pp_paths+=("$short")
   pp_counts+=("$count")

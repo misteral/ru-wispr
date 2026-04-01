@@ -1,5 +1,5 @@
 import XCTest
-@testable import RuWisperLib
+@testable import DiktoLib
 
 final class GigaAMTranscriberLogicTests: XCTestCase {
     private let mib = 1024 * 1024
