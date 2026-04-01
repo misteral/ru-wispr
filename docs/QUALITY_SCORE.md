@@ -13,5 +13,5 @@ Tracks quality grade per component. Updated periodically.
 | Menu bar UI | B | Animated states, recording list, functional |
 | Streaming overlay | B | Glassmorphism HUD, real-time feedback |
 | Unit tests | B | Good coverage of pure logic (Config, TextPostProcessor, KeyCodes, RecordingStore) |
-| Integration tests | B | CLI smoke tests + transcription tests, shellcheck |
-| CI | A | 4 parallel jobs, Swift-change detection for skip optimization |
+| Integration tests | B | CLI smoke tests, optional local transcription tests, shellcheck |
+| CI | A | 3 parallel jobs, Swift-change detection for skip optimization |

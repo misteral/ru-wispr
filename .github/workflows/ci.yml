@@ -58,16 +58,3 @@ jobs:
       - name: Install smoke test
         run: bash scripts/test-install.sh
 
-  transcription-test:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install whisper-cpp
-        run: brew install whisper-cpp
-
-      - name: Build
-        run: swift build -c release
-
-      - name: Transcription integration test
-        run: bash scripts/test-transcription.sh

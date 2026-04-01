@@ -56,14 +56,13 @@ Pure logic tests with no external dependencies.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on PRs to `main`. Four parallel jobs:
+GitHub Actions (`.github/workflows/ci.yml`) runs on PRs to `main`. Three parallel jobs:
 
 | Job | What it does |
 |---|---|
 | `build` | `swift build -c release` (skipped if no Swift files changed) |
 | `unit-tests` | `swift test` (skipped if no Swift files changed) |
 | `install-test` | Builds binary, tests CLI, bundles app, shellcheck |
-| `transcription-test` | Installs whisper-cpp, builds, runs transcription tests |
 
 ## Writing Tests
 
@@ -73,7 +72,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on PRs to `main`. Four parallel
 
 ### When to add integration tests
 - New CLI commands → add assertions to `scripts/test-install.sh`
-- Changes to transcription pipeline → add cases to `scripts/test-transcription.sh`
+- Changes to transcription pipeline → add cases to `scripts/test-transcription.sh` (manual/local run)
 - New shell scripts → add the script path to the shellcheck list in `test-install.sh`
 
 ## Running Checks Before Commit
