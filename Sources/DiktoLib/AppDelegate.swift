@@ -76,7 +76,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } else {
             if Transcriber.findWhisperBinary() == nil {
-                print("Error: whisper-cpp not found. Install it with: brew install whisper-cpp")
+                print("Error: whisper-cpp not found. Install it from https://github.com/ggerganov/whisper.cpp or via your package manager (e.g. brew install whisper-cpp)")
                 return
             }
         }

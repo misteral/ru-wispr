@@ -45,10 +45,10 @@ Dikto is a local voice dictation app for macOS. Push-to-talk records audio, tran
 Two engines, switchable via config:
 
 ### Whisper (`Transcriber.swift`)
-- Spawns `whisper-cpp` (Homebrew) as a subprocess
+- Spawns `whisper-cpp` as a subprocess
 - Parses stdout for transcription text
 - Multi-language, 9 model sizes (tiny → large)
-- Requires external binary: `brew install whisper-cpp`
+- Requires external `whisper-cpp` binary on `$PATH` or in standard locations
 
 ### GigaAM (`GigaAMTranscriber.swift` + `GigaAM/`)
 - Native MLX inference on Apple Silicon via `mlx-swift`
@@ -60,7 +60,7 @@ Two engines, switchable via config:
 - `dikto` (CLI) depends on `DiktoLib` only
 - `DiktoLib` external deps: `mlx-swift` (MLX, MLXNN, MLXFFT), `DynamicNotchKit`
 - Linked frameworks: CoreAudio, AVFoundation, AppKit
-- External tool: `whisper-cpp` (Homebrew) — runtime dependency for Whisper engine only
+- External tool: `whisper-cpp` — runtime dependency for Whisper engine only (binary must be on `$PATH` or in `/opt/homebrew/bin`, `/usr/local/bin`)
 
 ## CLI Subcommands
 

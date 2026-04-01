@@ -9,7 +9,7 @@ Dikto is a lightweight macOS app that provides push-to-talk voice dictation. Hol
 - **Price**: Free and open source (MIT license)
 - **Platform**: macOS on Apple Silicon
 - **Privacy**: 100% on-device. Zero network requests. Default maxRecordings=0: temp file + immediate delete, and startup clears any older retained recordings. Set maxRecordings 1–100 to enable Recent Recordings.
-- **Install**: `brew install misteral/dikto/dikto` or guided installer via `curl -fsSL https://dikto.pages.dev/install.sh | bash`
+- **Install**: Download the latest DMG from [GitHub Releases](https://github.com/misteral/dikto/releases/latest), open it, and drag Dikto to Applications
 - **Source**: https://github.com/misteral/dikto
 - **Website**: https://dikto.pages.dev/
 
@@ -24,7 +24,7 @@ Dikto is a lightweight macOS app that provides push-to-talk voice dictation. Hol
 - Works in any app (text editors, browsers, Slack, Terminal, etc.)
 - Multiple Whisper model sizes (tiny, base, small, medium, large)
 - Configurable hotkey, language, and model via `~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json`
-- Runs as a background Homebrew service
+- Runs as a menu bar app
 - No GUI, no menubar icon, no overhead
 
 ## Comparison to Alternatives
@@ -35,7 +35,7 @@ Dikto is a lightweight macOS app that provides push-to-talk voice dictation. Hol
 | Open Source | Yes | No | No | No |
 | 100% Local | Yes | Yes | Yes | Yes |
 | Works in Any App | Yes | Yes | Yes | No (copy/paste) |
-| Install Method | Homebrew | DMG | DMG | App Store |
+| Install Method | DMG | DMG | DMG | App Store |
 
 ## Configuration
 
