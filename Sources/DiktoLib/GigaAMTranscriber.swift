@@ -48,9 +48,19 @@ public class GigaAMTranscriber {
     private static let overlapSeconds = 1
     private static let commitThresholdSeconds = 8
 
+    // MLX keeps freed Metal buffers in a cache for reuse. That cache defaults
+    // to the full memory limit, which allows resident memory to grow into
+    // multi-GB territory during repeated inference with varying audio lengths.
+    // Dikto is latency-sensitive but not throughput-bound, so a much smaller
+    // cache keeps memory stable without hurting UX.
+    private static let minimumCacheLimitBytes = 64 * 1024 * 1024
+    private static let maximumCacheLimitBytes = 256 * 1024 * 1024
+    private static let memoryConfigurationLock = NSLock()
+    private static var hasConfiguredMemory = false
+
     /// Default model directory (search order):
     /// 1. App bundle: Contents/Resources/gigaam-v3-rnnt-mlx/
-    /// 2. User data: ~/Library/Application Support/RuWispr/models/gigaam-v3-rnnt-mlx/
+    /// 2. User data: ~/Library/Application Support/Dikto/models/gigaam-v3-rnnt-mlx/
     public static let defaultModelDir: URL = {
         // 1. Resolve via executable path: .app/Contents/MacOS/binary → .app/Contents/Resources/
         let execPath = ProcessInfo.processInfo.arguments[0]
@@ -84,12 +94,14 @@ public class GigaAMTranscriber {
     /// Load the model into memory. Call once before transcribing.
     public func loadModel() throws {
         guard !isLoaded else { return }
+        Self.configureMLXMemoryIfNeeded()
         let t0 = CFAbsoluteTimeGetCurrent()
         model = try loadGigaAMModel(from: modelDir)
         let dt = CFAbsoluteTimeGetCurrent() - t0
         let headType = model?.config.headType ?? "unknown"
-        fputs("GigaAM: \(headType.uppercased()) model loaded in \(dt.formatted(.number.precision(.fractionLength(2))))s\n", stderr)
         isLoaded = true
+        Self.trimCache()
+        fputs("GigaAM: \(headType.uppercased()) model loaded in \(dt.formatted(.number.precision(.fractionLength(2))))s\n", stderr)
     }
 
     /// Transcribe an audio file (WAV, 16kHz mono).
@@ -99,8 +111,12 @@ public class GigaAMTranscriber {
             throw GigaAMError.modelNotLoaded
         }
 
-        let audio = try loadAudioFile(url: audioURL)
-        return model.transcribe(audio)
+        let result = try {
+            let audio = try loadAudioFile(url: audioURL)
+            return model.transcribe(audio)
+        }()
+        Self.trimCache()
+        return result
     }
 
     /// Transcribe raw audio samples (Float32, 16kHz mono).
@@ -110,8 +126,9 @@ public class GigaAMTranscriber {
             throw GigaAMError.modelNotLoaded
         }
 
-        let audio = MLXArray(samples)
-        return model.transcribe(audio)
+        let result = model.transcribe(MLXArray(samples))
+        Self.trimCache()
+        return result
     }
 
     /// Transcribe raw audio samples in 30-second chunks for long recordings.
@@ -122,32 +139,35 @@ public class GigaAMTranscriber {
             throw GigaAMError.modelNotLoaded
         }
 
-        let sr = model.config.sampleRate
-        let chunkSize = chunkSeconds * sr
+        let result: String = {
+            let sr = model.config.sampleRate
+            let chunkSize = chunkSeconds * sr
 
-        // Short recording — single pass
-        if samples.count <= chunkSize {
-            let audio = MLXArray(samples)
-            return model.transcribe(audio)
-        }
-
-        // Long recording — split into chunks
-        var results: [String] = []
-        var offset = 0
-        while offset < samples.count {
-            let end = min(offset + chunkSize, samples.count)
-            let chunk = Array(samples[offset..<end])
-            // Skip very short trailing chunks (< 0.5s)
-            guard chunk.count >= sr / 2 else { break }
-            let audio = MLXArray(chunk)
-            let text = model.transcribe(audio)
-            if !text.isEmpty {
-                results.append(text)
+            // Short recording — single pass
+            if samples.count <= chunkSize {
+                return model.transcribe(MLXArray(samples))
             }
-            offset = end
-        }
 
-        return results.joined(separator: " ")
+            // Long recording — split into chunks
+            var results: [String] = []
+            var offset = 0
+            while offset < samples.count {
+                let end = min(offset + chunkSize, samples.count)
+                let chunk = Array(samples[offset..<end])
+                // Skip very short trailing chunks (< 0.5s)
+                guard chunk.count >= sr / 2 else { break }
+                let text = model.transcribe(MLXArray(chunk))
+                if !text.isEmpty {
+                    results.append(text)
+                }
+                offset = end
+            }
+
+            return results.joined(separator: " ")
+        }()
+
+        Self.trimCache()
+        return result
     }
 
     /// Windowed streaming transcription: processes only the recent audio window
@@ -225,32 +245,37 @@ public class GigaAMTranscriber {
             throw GigaAMError.modelNotLoaded
         }
 
-        guard context.committedSamples < samples.count else {
-            return context.committedText
-        }
+        let result: String = {
+            guard context.committedSamples < samples.count else {
+                return context.committedText
+            }
 
-        let sr = model.config.sampleRate
-        let overlapSize = Self.overlapSeconds * sr
+            let sr = model.config.sampleRate
+            let overlapSize = Self.overlapSeconds * sr
 
-        // Process remaining samples with overlap into committed region
-        let tailStart = max(context.committedSamples - overlapSize, 0)
-        let tail = Array(samples[tailStart...])
-        let tailText = model.transcribe(MLXArray(tail))
+            // Process remaining samples with overlap into committed region
+            let tailStart = max(context.committedSamples - overlapSize, 0)
+            let tail = Array(samples[tailStart...])
+            let tailText = model.transcribe(MLXArray(tail))
 
-        if context.committedText.isEmpty {
-            return tailText
-        }
-        if tailText.isEmpty {
-            return context.committedText
-        }
+            if context.committedText.isEmpty {
+                return tailText
+            }
+            if tailText.isEmpty {
+                return context.committedText
+            }
 
-        // Stitch tail with committed text
-        if tailStart < context.committedSamples {
-            let newPart = Self.stitchTexts(committed: context.committedText, window: tailText)
-            return newPart.isEmpty ? context.committedText : context.committedText + " " + newPart
-        }
+            // Stitch tail with committed text
+            if tailStart < context.committedSamples {
+                let newPart = Self.stitchTexts(committed: context.committedText, window: tailText)
+                return newPart.isEmpty ? context.committedText : context.committedText + " " + newPart
+            }
 
-        return context.committedText + " " + tailText
+            return context.committedText + " " + tailText
+        }()
+
+        Self.trimCache()
+        return result
     }
 
     /// Find new text in window that doesn't overlap with committed text.
@@ -277,6 +302,38 @@ public class GigaAMTranscriber {
 
         // No overlap found — return full window text
         return window
+    }
+
+    static func recommendedCacheLimitBytes(maxRecommendedWorkingSetSize: Int?) -> Int {
+        guard let maxRecommendedWorkingSetSize, maxRecommendedWorkingSetSize > 0 else {
+            return maximumCacheLimitBytes
+        }
+
+        let suggested = maxRecommendedWorkingSetSize / 8
+        return min(maximumCacheLimitBytes, max(minimumCacheLimitBytes, suggested))
+    }
+
+    private static func configureMLXMemoryIfNeeded() {
+        memoryConfigurationLock.lock()
+        defer { memoryConfigurationLock.unlock() }
+
+        guard !hasConfiguredMemory else { return }
+
+        let cacheLimit = recommendedCacheLimitBytes(maxRecommendedWorkingSetSize: GPU.maxRecommendedWorkingSetBytes())
+        Memory.cacheLimit = cacheLimit
+        hasConfiguredMemory = true
+
+        fputs("GigaAM: MLX cache limit set to \(formatMiB(cacheLimit))\n", stderr)
+    }
+
+    private static func trimCache() {
+        Stream.gpu.synchronize()
+        Memory.clearCache()
+    }
+
+    private static func formatMiB(_ bytes: Int) -> String {
+        let mib = Double(bytes) / (1024.0 * 1024.0)
+        return String(format: "%.0f MiB", mib)
     }
 
     /// Check if the model directory exists and contains required files.

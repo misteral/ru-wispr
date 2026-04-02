@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-CONFIG_FILE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json"
+CONFIG_FILE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json"
 
 # Read a JSON value using grep/sed (no python dependency)
 read_config() {
@@ -109,7 +109,7 @@ parse_hotkey_input() {
     echo "${code}|${mods_json}"
 }
 
-echo "ru-wisper dev build"
+echo "dikto dev build"
 echo "────────────────────"
 
 # Read current config values
@@ -222,15 +222,9 @@ echo "────────────────────"
 
 # Kill any running instances
 echo "  Stopping running instances..."
-pkill -f "ru-wisper start" 2>/dev/null || true
-brew services stop ru-wisper 2>/dev/null || true
+pkill -f "dikto start" 2>/dev/null || true
+pkill -f "/Dikto.app/Contents/MacOS/dikto" 2>/dev/null || true
 sleep 1
-
-# Uninstall brew version
-if brew list ru-wisper &>/dev/null; then
-    echo "  Removing brew installation..."
-    brew uninstall --force ru-wisper 2>/dev/null || true
-fi
 
 if ! brew list whisper-cpp &>/dev/null; then
     echo "  Reinstalling whisper-cpp..."
@@ -243,13 +237,13 @@ swift build -c release 2>&1 | tail -1
 
 # Bundle the app
 echo "  Bundling app..."
-bash scripts/bundle-app.sh .build/release/ru-wisper RuWisper.app dev
+bash scripts/bundle-app.sh .build/release/dikto Dikto.app dev
 
 # Copy to ~/Applications so macOS recognizes it for permissions
-rm -rf ~/Applications/RuWisper.app
-cp -R RuWisper.app ~/Applications/RuWisper.app
-rm -rf RuWisper.app
+rm -rf ~/Applications/Dikto.app
+cp -R Dikto.app ~/Applications/Dikto.app
+rm -rf Dikto.app
 
 # Run
 echo "  Starting..."
-~/Applications/RuWisper.app/Contents/MacOS/ru-wisper start
+~/Applications/Dikto.app/Contents/MacOS/dikto start

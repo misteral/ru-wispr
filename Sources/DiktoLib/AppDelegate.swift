@@ -76,7 +76,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } else {
             if Transcriber.findWhisperBinary() == nil {
-                print("Error: whisper-cpp not found. Install it with: brew install whisper-cpp")
+                print("Error: whisper-cpp not found. Install it from https://github.com/ggerganov/whisper.cpp or via your package manager (e.g. brew install whisper-cpp)")
                 return
             }
         }
@@ -147,7 +147,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar.buildMenu()
 
         let hotkeyDesc = KeyCodes.describe(keyCode: config.hotkey.keyCode, modifiers: config.hotkey.modifiers)
-        print("ru-wisper v\(RuWisper.version)")
+        print("dikto v\(Dikto.version)")
         print("Hotkey: \(hotkeyDesc)")
         print("Engine: \(config.effectiveEngine)")
         if config.effectiveEngine == "gigaam" {

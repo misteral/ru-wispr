@@ -21,9 +21,9 @@
 
 ## Config & Data Paths
 
-- **Config** (synced via iCloud): `~/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/config.json`
-- **Data** (local, large files): `~/Library/Application Support/RuWispr/` — models, recordings
-- Legacy path `~/.config/ru-wisper/` auto-migrated on first launch
+- **Config** (synced via iCloud): `~/Library/Mobile Documents/com~apple~CloudDocs/Dikto/config.json`
+- **Data** (local, large files): `~/Library/Application Support/Dikto/` — models, recordings
+- Legacy paths `~/Library/Mobile Documents/com~apple~CloudDocs/RuWispr/`, `~/Library/Application Support/RuWispr/`, and `~/.config/ru-wisper/` auto-migrated on first launch
 - Use `Config.configDir` for config, `Config.dataDir` for models/recordings
 - Use `FlexBool` type for boolean config values (accepts bool/string/int for user-friendliness)
 - All config fields must have sensible defaults

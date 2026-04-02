@@ -124,9 +124,9 @@ enum TranscriberError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .whisperNotFound:
-            return "whisper-cpp not found. Install it with: brew install whisper-cpp"
+            return "whisper-cpp not found. Install it from https://github.com/ggerganov/whisper.cpp or via your package manager (e.g. brew install whisper-cpp)"
         case .modelNotFound(let size):
-            return "Whisper model '\(size)' not found. Download it with: ru-wisper download-model \(size)"
+            return "Whisper model '\(size)' not found. Download it with: dikto download-model \(size)"
         case .transcriptionFailed:
             return "Transcription failed"
         }

@@ -1,5 +1,5 @@
 import XCTest
-@testable import RuWisperLib
+@testable import DiktoLib
 
 final class TextPostProcessorTests: XCTestCase {
 

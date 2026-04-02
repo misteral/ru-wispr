@@ -10,8 +10,8 @@ swift test
 
 Run a single test:
 ```bash
-swift test --filter RuWisperTests.ConfigTests
-swift test --filter RuWisperTests.ConfigTests/testFlexBoolDecoding
+swift test --filter DiktoTests.ConfigTests
+swift test --filter DiktoTests.ConfigTests/testFlexBoolDecoding
 ```
 
 ### Integration Tests
@@ -27,7 +27,7 @@ bash scripts/test-transcription.sh
 
 ## Test Structure
 
-### Unit Tests (`Tests/RuWisperTests/`)
+### Unit Tests (`Tests/DiktoTests/`)
 
 Pure logic tests with no external dependencies.
 
@@ -41,7 +41,7 @@ Pure logic tests with no external dependencies.
 
 ### Integration Tests (`scripts/`)
 
-**Install smoke test** (`test-install.sh`):
+**CLI smoke test** (`test-install.sh`):
 - Builds from source and verifies the binary
 - Tests all CLI commands (`--help`, `status`, `get-hotkey`, `set-hotkey`, `set-model`)
 - Validates error handling for invalid inputs
@@ -56,24 +56,23 @@ Pure logic tests with no external dependencies.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on PRs to `main`. Four parallel jobs:
+GitHub Actions (`.github/workflows/ci.yml`) runs on PRs to `main`. Three parallel jobs:
 
 | Job | What it does |
 |---|---|
 | `build` | `swift build -c release` (skipped if no Swift files changed) |
 | `unit-tests` | `swift test` (skipped if no Swift files changed) |
 | `install-test` | Builds binary, tests CLI, bundles app, shellcheck |
-| `transcription-test` | Installs whisper-cpp, builds, runs transcription tests |
 
 ## Writing Tests
 
 ### When to add unit tests
-- New pure logic (parsing, transformations, config handling) → `Tests/RuWisperTests/`
+- New pure logic (parsing, transformations, config handling) → `Tests/DiktoTests/`
 - Good candidates: pure functions, data transformations, anything without hardware (microphone, display, accessibility)
 
 ### When to add integration tests
 - New CLI commands → add assertions to `scripts/test-install.sh`
-- Changes to transcription pipeline → add cases to `scripts/test-transcription.sh`
+- Changes to transcription pipeline → add cases to `scripts/test-transcription.sh` (manual/local run)
 - New shell scripts → add the script path to the shellcheck list in `test-install.sh`
 
 ## Running Checks Before Commit

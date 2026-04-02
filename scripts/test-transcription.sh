@@ -7,7 +7,7 @@ FAIL=0
 pass() { PASS=$((PASS + 1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL + 1)); echo "  FAIL: $1"; }
 
-echo "ru-wisper transcription integration tests"
+echo "dikto transcription integration tests"
 echo "--------------------------------------------"
 
 # Check whisper-cli is installed
@@ -31,7 +31,7 @@ MODEL_FILE="ggml-${MODEL_SIZE}.bin"
 MODEL_PATH=""
 
 for dir in \
-    "$HOME/Library/Application Support/RuWispr/models" \
+    "$HOME/Library/Application Support/Dikto/models" \
     "/opt/homebrew/share/whisper-cpp/models" \
     "/usr/local/share/whisper-cpp/models" \
     "$HOME/.cache/whisper"; do
@@ -43,7 +43,7 @@ done
 
 if [ -z "$MODEL_PATH" ]; then
     echo "Downloading $MODEL_SIZE model..."
-    MODEL_DIR="$HOME/Library/Application Support/RuWispr/models"
+    MODEL_DIR="$HOME/Library/Application Support/Dikto/models"
     mkdir -p "$MODEL_DIR"
     MODEL_PATH="$MODEL_DIR/$MODEL_FILE"
     curl -L --progress-bar -o "$MODEL_PATH" \
@@ -51,7 +51,7 @@ if [ -z "$MODEL_PATH" ]; then
 fi
 pass "Model available: $MODEL_PATH"
 
-TMPDIR_TEST=$(mktemp -d /tmp/ru-wisper-test.XXXXXX)
+TMPDIR_TEST=$(mktemp -d /tmp/dikto-test.XXXXXX)
 trap 'rm -rf "$TMPDIR_TEST"' EXIT
 
 # Generate test audio using macOS text-to-speech
@@ -87,7 +87,7 @@ else
 fi
 
 # Test 3: Transcriber class via the built binary
-BIN=".build/release/ru-wisper"
+BIN=".build/release/dikto"
 if [ -x "$BIN" ]; then
     if $BIN status 2>&1 | grep -q "whisper-cpp: yes"; then
         pass "Binary detects whisper-cpp"
