@@ -6,6 +6,7 @@ enum OverlayPhase: Equatable {
     case recording
     case processing
     case done
+    case empty
 }
 
 // MARK: - Observable State
@@ -29,6 +30,7 @@ struct StreamingOverlayContent: View {
         case .recording: state.isLocked ? 0.30 : 0.22
         case .processing: 0.25
         case .done: 0.35
+        case .empty: 0.30
         }
     }
 
@@ -50,6 +52,11 @@ struct StreamingOverlayContent: View {
                     .padding(.leading, 12)
 
             case .done:
+                DoneIndicator()
+                    .frame(width: 44, height: 44)
+                    .padding(.leading, 12)
+
+            case .empty:
                 DoneIndicator()
                     .frame(width: 44, height: 44)
                     .padding(.leading, 12)

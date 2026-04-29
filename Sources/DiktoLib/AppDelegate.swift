@@ -14,6 +14,13 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastStreamingText: String = ""
     private var streamingInsertedText: String = ""
     private var streamingContext = StreamingContext()
+    /// Peak RMS observed during the current recording. Used to distinguish
+    /// "model didn't recognize speech" from "microphone returned silence".
+    private var maxRecordingRMS: Float = 0
+    /// Threshold below which we consider input silent (≈-40 dB). Anything
+    /// quieter than this almost certainly means CoreAudio/HAL failed to deliver
+    /// real samples (e.g. coreaudiod stuck after another app held the mic).
+    private static let silentRMSThreshold: Float = 0.01
     var config: Config!
     var overlay: NotchOverlay!
     var isPressed = false
@@ -248,6 +255,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 outputURL = RecordingStore.newRecordingURL()
             }
 
+            self.maxRecordingRMS = 0
+
             // Set up streaming for GigaAM
             if self.config.effectiveEngine == "gigaam" && self.config.effectiveStreaming {
                 self.streamingBuffer = []
@@ -255,11 +264,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 self.streamingInsertedText = ""
                 self.streamingContext.reset()
                 self.recorder.onAudioSamples = { [weak self] samples in
-                    self?.streamingBuffer.append(contentsOf: samples)
-                    
-                    // Calculate audio level for waveform visualizer
+                    guard let self = self else { return }
+                    self.streamingBuffer.append(contentsOf: samples)
+
                     let rms = sqrt(samples.map { $0 * $0 }.reduce(0, +) / Float(max(1, samples.count)))
-                    Task { @MainActor in
+                    if rms > self.maxRecordingRMS { self.maxRecordingRMS = rms }
+                    Task { @MainActor [weak self] in
                         self?.overlay.updateAudioLevel(rms)
                     }
                 }
@@ -268,7 +278,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     self.overlay.show()
                 }
             } else {
-                self.recorder.onAudioSamples = nil
+                // Track RMS even when streaming is disabled / engine != gigaam
+                self.recorder.onAudioSamples = { [weak self] samples in
+                    guard let self = self else { return }
+                    let rms = sqrt(samples.map { $0 * $0 }.reduce(0, +) / Float(max(1, samples.count)))
+                    if rms > self.maxRecordingRMS { self.maxRecordingRMS = rms }
+                }
             }
 
             NSLog("[OW] Starting recording to: %@", outputURL.path)
@@ -388,34 +403,34 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }
+                let isMeaningful = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let peakRMS = self.maxRecordingRMS
                 await MainActor.run {
-                    if !text.isEmpty {
+                    if isMeaningful {
                         NSLog("[OW] Inserting text...")
                         self.lastTranscription = text
                         self.inserter.insert(text: text)
                         NSLog("[OW] Text inserted OK")
-                        // Show green checkmark with the final text
                         self.overlay.showDone(text: text)
                     } else {
-                        NSLog("[OW] Text is empty, skipping insert")
-                        self.overlay.hide()
+                        let reason = peakRMS < AppDelegate.silentRMSThreshold
+                            ? L10n.microphoneSilent
+                            : L10n.notRecognized
+                        NSLog("[OW] Empty result (peak RMS=%.4f) → %@", peakRMS, reason)
+                        self.overlay.showEmpty(text: reason)
                     }
                     self.statusBar.state = .idle
                     self.statusBar.buildMenu()
                 }
-                // Auto-hide overlay after showing done state.
-                // Capture the overlay generation so we skip the hide
-                // if a new recording started during the delay.
-                if !text.isEmpty {
-                    let gen = await MainActor.run { self.overlay.generation }
-                    try? await Task.sleep(for: .seconds(1.5))
-                    await MainActor.run {
-                        guard self.overlay.generation == gen else {
-                            NSLog("[OW] Skipping stale auto-hide (gen %d vs current %d)", gen, self.overlay.generation)
-                            return
-                        }
-                        self.overlay.hide()
+                let gen = await MainActor.run { self.overlay.generation }
+                let displayDuration = isMeaningful ? 1.5 : 2.5
+                try? await Task.sleep(for: .seconds(displayDuration))
+                await MainActor.run {
+                    guard self.overlay.generation == gen else {
+                        NSLog("[OW] Skipping stale auto-hide (gen %d vs current %d)", gen, self.overlay.generation)
+                        return
                     }
+                    self.overlay.hide()
                 }
             } catch {
                 NSLog("[OW] Transcription error: %@", error.localizedDescription)

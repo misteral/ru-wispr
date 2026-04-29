@@ -41,6 +41,8 @@ enum L10n {
 
     static var processing: String { isRussian ? "Обработка..." : "Processing..." }
     static var done: String { isRussian ? "Готово" : "Done" }
+    static var notRecognized: String { isRussian ? "Не распознано" : "Not recognized" }
+    static var microphoneSilent: String { isRussian ? "Микрофон молчит" : "Microphone silent" }
 
     static func recordingAccessibility(_ text: String) -> String {
         isRussian ? "Запись: \(text)" : "Recording: \(text)"

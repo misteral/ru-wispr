@@ -6,6 +6,7 @@ import DynamicNotchKit
 private extension Color {
     static let dotRed = Color(red: 0.88, green: 0.22, blue: 0.21)
     static let dotGreen = Color(red: 0.22, green: 0.78, blue: 0.45)
+    static let dotYellow = Color(red: 0.95, green: 0.72, blue: 0.18)
 }
 
 // MARK: - Breathing Red Dot (recording)
@@ -67,6 +68,17 @@ private struct AnimatedCheckmark: View {
     }
 }
 
+// MARK: - Static Yellow Dot (empty result / warning)
+
+private struct StaticYellowDot: View {
+    var body: some View {
+        Circle()
+            .fill(Color.dotYellow)
+            .frame(width: 8, height: 8)
+            .shadow(color: Color.dotYellow.opacity(0.35), radius: 4)
+    }
+}
+
 // MARK: - Phase Indicator (red dot during recording, green checkmark on done)
 
 private struct PhaseIndicator: View {
@@ -74,10 +86,14 @@ private struct PhaseIndicator: View {
 
     var body: some View {
         ZStack {
-            if phase == .done {
+            switch phase {
+            case .done:
                 AnimatedCheckmark()
                     .transition(.scale(scale: 0.5).combined(with: .opacity))
-            } else {
+            case .empty:
+                StaticYellowDot()
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+            default:
                 BreathingRedDot()
                     .transition(.scale(scale: 0.5).combined(with: .opacity))
             }
@@ -93,10 +109,14 @@ struct NotchTranscriptionView: View {
     @ObservedObject var state: NotchOverlayState
 
     private var isDone: Bool { state.phase == .done }
+    private var isCompact: Bool { state.phase == .done || state.phase == .empty }
 
     private var displayText: String {
-        if isDone { return L10n.done }
-        return state.text.isEmpty ? L10n.recording : state.text
+        switch state.phase {
+        case .done: return L10n.done
+        case .empty: return state.text
+        default: return state.text.isEmpty ? L10n.recording : state.text
+        }
     }
 
     var body: some View {
@@ -104,16 +124,15 @@ struct NotchTranscriptionView: View {
             PhaseIndicator(phase: state.phase)
 
             Text(displayText)
-                .font(.system(size: isDone ? 13 : 14, weight: isDone ? .medium : .regular))
-                .foregroundStyle(.primary.opacity(isDone ? 0.6 : 0.8))
+                .font(.system(size: isCompact ? 13 : 14, weight: isCompact ? .medium : .regular))
+                .foregroundStyle(.primary.opacity(isCompact ? 0.6 : 0.8))
                 .lineLimit(1)
                 .truncationMode(.head)
                 // During recording: push text to trailing so latest words are visible
-                // During done: just sit next to the dot naturally
-                .frame(maxWidth: isDone ? nil : .infinity, alignment: .trailing)
+                // During done/empty: sit next to the dot naturally
+                .frame(maxWidth: isCompact ? nil : .infinity, alignment: isCompact ? .leading : .trailing)
         }
-        // Dot pinned to leading edge; width animates via withAnimation
-        .frame(width: isDone ? 90 : 300, alignment: .leading)
+        .frame(width: isCompact ? 180 : 300, alignment: .leading)
         .clipped()
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
@@ -182,6 +201,26 @@ final class NotchOverlay {
         // Phase animates (frame width shrinks, dot color morphs)
         withAnimation(.easeInOut(duration: 0.5)) {
             state.phase = .done
+        }
+    }
+
+    func showEmpty(text: String) {
+        // Show overlay with warning text (yellow dot) — used when transcription
+        // returned no text. If overlay was already hidden, materialise it.
+        if !isVisible {
+            state.text = ""
+            state.phase = .recording
+            isVisible = true
+            generation += 1
+            let s = state
+            notch = DynamicNotch(style: .auto) {
+                NotchTranscriptionView(state: s)
+            }
+            Task { await notch?.expand() }
+        }
+        state.text = text
+        withAnimation(.easeInOut(duration: 0.4)) {
+            state.phase = .empty
         }
     }
 
