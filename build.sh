@@ -98,6 +98,9 @@ cp "Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
 if [ -d "Resources/Audio" ]; then
     cp -R "Resources/Audio" "$RESOURCES/Audio"
 fi
+if [ -f "Resources/dictionary.json" ]; then
+    cp "Resources/dictionary.json" "$RESOURCES/dictionary.json"
+fi
 
 # GigaAM RNNT model — bundle if available
 PROJECT_GIGAAM_MODEL="$(pwd)/Resources/gigaam-v3-rnnt-mlx"

@@ -53,6 +53,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupInner() async throws {
         config = Config.load()
         L10n.language = config.language
+        // Warm the dictionary singleton off the hot path.
+        _ = DictionaryManager.shared
         if Config.effectiveMaxRecordings(config.maxRecordings) == 0 {
             RecordingStore.deleteAllRecordings()
         }
@@ -69,7 +71,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         if config.effectiveEngine == "gigaam" {
             if !GigaAMTranscriber.isAvailable(path: config.gigaamPath) {
-                print("Error: GigaAM model not found. Set 'gigaamPath' in config or place model in app bundle.")
+                await presentStartupError(L10n.gigaamModelMissing)
                 return
             }
             // Pre-load model for fast first transcription and streaming
@@ -78,12 +80,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 try gigaamTranscriber.loadModel()
                 print("GigaAM: ready")
             } catch {
-                print("Error loading GigaAM model: \(error.localizedDescription)")
+                await presentStartupError(L10n.gigaamLoadFailed(error.localizedDescription))
                 return
             }
         } else {
             if Transcriber.findWhisperBinary() == nil {
-                print("Error: whisper-cpp not found. Install it from https://github.com/ggerganov/whisper.cpp or via your package manager (e.g. brew install whisper-cpp)")
+                await presentStartupError(L10n.whisperBinaryMissing)
                 return
             }
         }
@@ -130,6 +132,25 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         await MainActor.run {
             self.startListening()
+        }
+    }
+
+    /// Surface a fatal startup error: log it, flip the status bar to the
+    /// error state (warning icon + message in the dropdown), and pop a modal
+    /// alert. Used when we can't proceed past `setupInner` — without this,
+    /// the menu bar stays on the default logo and the user has no idea why
+    /// the hotkey doesn't respond.
+    private func presentStartupError(_ message: String) async {
+        print("Error: \(message)")
+        await MainActor.run {
+            self.statusBar.state = .error(message)
+            self.statusBar.buildMenu()
+
+            let alert = NSAlert()
+            alert.messageText = L10n.startupErrorTitle
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.runModal()
         }
     }
 
@@ -398,7 +419,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     raw = try await self.transcriber.transcribe(audioURL: audioURL)
                 }
                 NSLog("[OW] Raw transcription: '%@'", raw)
-                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
+                let dictApplied = DictionaryManager.shared.apply(to: raw)
+                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(dictApplied) : dictApplied
                 NSLog("[OW] Final text: '%@'", text)
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
@@ -500,7 +522,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 } else {
                     raw = try await self.transcriber.transcribe(audioURL: audioURL)
                 }
-                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
+                let dictApplied = DictionaryManager.shared.apply(to: raw)
+                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(dictApplied) : dictApplied
                 await MainActor.run {
                     if !text.isEmpty {
                         self.lastTranscription = text

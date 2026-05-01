@@ -19,6 +19,10 @@ if [ -d "$REPO_DIR/Resources/Audio" ]; then
     cp -R "$REPO_DIR/Resources/Audio" "$APP_DIR/Contents/Resources/Audio"
 fi
 
+if [ -f "$REPO_DIR/Resources/dictionary.json" ]; then
+    cp "$REPO_DIR/Resources/dictionary.json" "$APP_DIR/Contents/Resources/dictionary.json"
+fi
+
 if [ -f "$REPO_DIR/Resources/gigaam-v3-rnnt-mlx/config.json" ] && [ -f "$REPO_DIR/Resources/gigaam-v3-rnnt-mlx/model.safetensors" ]; then
     cp -R "$REPO_DIR/Resources/gigaam-v3-rnnt-mlx" "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
 fi

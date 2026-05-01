@@ -53,4 +53,32 @@ enum L10n {
     static func downloadingModelNamed(_ name: String) -> String {
         isRussian ? "Загрузка модели \(name)..." : "Downloading \(name) model..."
     }
+
+    // MARK: - Startup errors
+
+    static var startupErrorTitle: String {
+        isRussian ? "Dikto не смог запуститься" : "Dikto failed to start"
+    }
+
+    static var statusError: String {
+        isRussian ? "Ошибка" : "Error"
+    }
+
+    static var gigaamModelMissing: String {
+        isRussian
+            ? "Модель GigaAM не найдена. Укажите 'gigaamPath' в config.json или вложите модель в bundle приложения."
+            : "GigaAM model not found. Set 'gigaamPath' in config.json or bundle the model with the app."
+    }
+
+    static func gigaamLoadFailed(_ detail: String) -> String {
+        isRussian
+            ? "Не удалось загрузить модель GigaAM: \(detail)"
+            : "Failed to load GigaAM model: \(detail)"
+    }
+
+    static var whisperBinaryMissing: String {
+        isRussian
+            ? "whisper-cpp не установлен. Установите через 'brew install whisper-cpp'."
+            : "whisper-cpp not found. Install with 'brew install whisper-cpp' or from https://github.com/ggerganov/whisper.cpp."
+    }
 }

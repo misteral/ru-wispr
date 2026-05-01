@@ -112,18 +112,44 @@ cp "Resources/AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
 if [ -d "Resources/Audio" ]; then
     cp -R "Resources/Audio" "$APP_DIR/Contents/Resources/Audio"
 fi
-
-# GigaAM RNNT model — bundle for distribution
-GIGAAM_MODEL="${GIGAAM_MODEL:-$HOME/Library/Application Support/Dikto/models/gigaam-v3-rnnt-mlx}"
-if [ -f "$GIGAAM_MODEL/config.json" ] && [ -f "$GIGAAM_MODEL/model.safetensors" ]; then
-    step "Bundling GigaAM RNNT model..."
-    cp -R "$GIGAAM_MODEL" "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
-    echo "Model: $GIGAAM_MODEL"
-    du -sh "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
-else
-    warn "GigaAM RNNT model not found at $GIGAAM_MODEL"
-    echo "    Set GIGAAM_MODEL=/path/to/gigaam-v3-rnnt-mlx to bundle it"
+if [ -f "Resources/dictionary.json" ]; then
+    cp "Resources/dictionary.json" "$APP_DIR/Contents/Resources/dictionary.json"
 fi
+
+# GigaAM RNNT model — bundle for distribution.
+# Search order matches build.sh: project Resources/ first (so the repo is the
+# source of truth for what ships), then user data dir, then legacy ru-wisper
+# path. Distribution builds MUST include the model — fail loudly if missing
+# so a broken DMG never reaches users.
+PROJECT_GIGAAM_MODEL="$(pwd)/Resources/gigaam-v3-rnnt-mlx"
+APP_SUPPORT_GIGAAM_MODEL="$HOME/Library/Application Support/Dikto/models/gigaam-v3-rnnt-mlx"
+LEGACY_GIGAAM_MODEL="$HOME/.config/ru-wisper/models/gigaam-v3-rnnt-mlx"
+
+if [ -n "${GIGAAM_MODEL:-}" ]; then
+    GIGAAM_MODEL_DIR="$GIGAAM_MODEL"
+elif [ -f "$PROJECT_GIGAAM_MODEL/config.json" ] && [ -f "$PROJECT_GIGAAM_MODEL/model.safetensors" ]; then
+    GIGAAM_MODEL_DIR="$PROJECT_GIGAAM_MODEL"
+elif [ -f "$APP_SUPPORT_GIGAAM_MODEL/config.json" ] && [ -f "$APP_SUPPORT_GIGAAM_MODEL/model.safetensors" ]; then
+    GIGAAM_MODEL_DIR="$APP_SUPPORT_GIGAAM_MODEL"
+elif [ -f "$LEGACY_GIGAAM_MODEL/config.json" ] && [ -f "$LEGACY_GIGAAM_MODEL/model.safetensors" ]; then
+    GIGAAM_MODEL_DIR="$LEGACY_GIGAAM_MODEL"
+else
+    GIGAAM_MODEL_DIR=""
+fi
+
+if [ -z "$GIGAAM_MODEL_DIR" ] || [ ! -f "$GIGAAM_MODEL_DIR/config.json" ] || [ ! -f "$GIGAAM_MODEL_DIR/model.safetensors" ]; then
+    echo ""
+    echo "Checked:"
+    echo "  $PROJECT_GIGAAM_MODEL"
+    echo "  $APP_SUPPORT_GIGAAM_MODEL"
+    echo "  $LEGACY_GIGAAM_MODEL"
+    echo "Or set GIGAAM_MODEL=/path/to/gigaam-v3-rnnt-mlx"
+    fail "GigaAM RNNT model not found — refusing to build a release without it"
+fi
+
+step "Bundling GigaAM RNNT model from $GIGAAM_MODEL_DIR..."
+cp -R "$GIGAAM_MODEL_DIR" "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
+du -sh "$APP_DIR/Contents/Resources/gigaam-v3-rnnt-mlx"
 
 # Info.plist
 cat > "$APP_DIR/Contents/Info.plist" << PLIST

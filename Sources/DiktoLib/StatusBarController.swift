@@ -17,13 +17,14 @@ class StatusBarController: NSObject {
 
     var reprocessHandler: ((URL) -> Void)?
 
-    enum State {
+    enum State: Equatable {
         case idle
         case recording
         case transcribing
         case downloading
         case waitingForPermission
         case copiedToClipboard
+        case error(String)
     }
 
     var state: State = .idle {
@@ -98,6 +99,7 @@ class StatusBarController: NSObject {
         case .downloading: stateText = L10n.downloadingModel
         case .waitingForPermission: stateText = L10n.waitingForAccessibility
         case .copiedToClipboard: stateText = L10n.copiedToClipboard
+        case .error(let message): stateText = "\(L10n.statusError): \(message)"
         }
         let stateItem = NSMenuItem(title: stateText, action: nil, keyEquivalent: "")
         stateItem.isEnabled = false
@@ -196,6 +198,8 @@ class StatusBarController: NSObject {
             setIcon(StatusBarController.drawLockIcon())
         case .copiedToClipboard:
             setIcon(StatusBarController.drawCheckmarkIcon())
+        case .error:
+            setIcon(StatusBarController.drawWarningIcon())
         }
     }
 
@@ -414,6 +418,42 @@ class StatusBarController: NSObject {
             shacklePath.lineWidth = 1.8
             shacklePath.lineCapStyle = .round
             shacklePath.stroke()
+
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    static func drawWarningIcon() -> NSImage {
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            NSColor.black.setStroke()
+            NSColor.black.setFill()
+
+            let centerX = rect.midX
+
+            // Triangle outline
+            let triangle = NSBezierPath()
+            triangle.move(to: NSPoint(x: centerX, y: 14.5))
+            triangle.line(to: NSPoint(x: centerX - 6.5, y: 3))
+            triangle.line(to: NSPoint(x: centerX + 6.5, y: 3))
+            triangle.close()
+            triangle.lineWidth = 1.6
+            triangle.lineJoinStyle = .round
+            triangle.stroke()
+
+            // Exclamation stem
+            let stem = NSBezierPath()
+            stem.move(to: NSPoint(x: centerX, y: 11.5))
+            stem.line(to: NSPoint(x: centerX, y: 6.5))
+            stem.lineWidth = 1.8
+            stem.lineCapStyle = .round
+            stem.stroke()
+
+            // Exclamation dot
+            let dotRect = NSRect(x: centerX - 0.9, y: 4.2, width: 1.8, height: 1.8)
+            NSBezierPath(ovalIn: dotRect).fill()
 
             return true
         }
