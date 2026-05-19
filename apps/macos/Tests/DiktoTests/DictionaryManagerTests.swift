@@ -154,4 +154,94 @@ final class DictionaryManagerTests: XCTestCase {
         try! data.write(to: url)
         return url
     }
+
+    // MARK: - Editor snapshot / save
+
+    func testSnapshotSortedByKey() throws {
+        let url = makeTempDictionaryFile([
+            "свифт": "Swift",
+            "апи": "API",
+            "икс код": "Xcode",
+        ])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let manager = DictionaryManager(file: url)
+        let entries = manager.snapshot()
+        XCTAssertEqual(entries.map(\.key), ["апи", "икс код", "свифт"])
+        XCTAssertEqual(entries.first?.value, "API")
+    }
+
+    func testSaveRoundTripsToDisk() throws {
+        let url = makeTempDictionaryFile([:])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let manager = DictionaryManager(file: url)
+        try manager.save(entries: [
+            (key: "тест", value: "Test"),
+            (key: "докер", value: "Docker"),
+        ])
+
+        let data = try Data(contentsOf: url)
+        let decoded = try JSONDecoder().decode([String: String].self, from: data)
+        XCTAssertEqual(decoded, ["тест": "Test", "докер": "Docker"])
+    }
+
+    func testSaveDropsEmptyAndTrimsKeys() throws {
+        let url = makeTempDictionaryFile([:])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let manager = DictionaryManager(file: url)
+        try manager.save(entries: [
+            (key: "  свифт  ", value: "Swift"),
+            (key: "", value: "ignored"),
+            (key: "   ", value: "also ignored"),
+        ])
+
+        let data = try Data(contentsOf: url)
+        let decoded = try JSONDecoder().decode([String: String].self, from: data)
+        XCTAssertEqual(decoded, ["свифт": "Swift"])
+    }
+
+    func testSaveLastDuplicateWins() throws {
+        let url = makeTempDictionaryFile([:])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let manager = DictionaryManager(file: url)
+        try manager.save(entries: [
+            (key: "рект", value: "React"),
+            (key: "рект", value: "React (overridden)"),
+        ])
+
+        let data = try Data(contentsOf: url)
+        let decoded = try JSONDecoder().decode([String: String].self, from: data)
+        XCTAssertEqual(decoded, ["рект": "React (overridden)"])
+    }
+
+    func testSaveUpdatesRegexCacheImmediately() throws {
+        let url = makeTempDictionaryFile(["свифт": "Swift"])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let manager = DictionaryManager(file: url)
+        XCTAssertEqual(manager.apply(to: "учу свифт"), "учу Swift")
+
+        try manager.save(entries: [(key: "питон", value: "Python")])
+
+        // Old mapping gone, new mapping live — no separate reload() needed.
+        XCTAssertEqual(manager.apply(to: "учу свифт"), "учу свифт")
+        XCTAssertEqual(manager.apply(to: "учу питон"), "учу Python")
+    }
+
+    func testSnapshotReflectsLastSave() throws {
+        let url = makeTempDictionaryFile(["свифт": "Swift"])
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let manager = DictionaryManager(file: url)
+        try manager.save(entries: [
+            (key: "докер", value: "Docker"),
+            (key: "апи", value: "API"),
+        ])
+
+        let entries = manager.snapshot()
+        XCTAssertEqual(entries.map(\.key), ["апи", "докер"])
+    }
 }

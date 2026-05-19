@@ -167,6 +167,10 @@ class StatusBarController: NSObject {
         openItem.target = self
         menu.addItem(openItem)
 
+        let dictItem = NSMenuItem(title: L10n.openDictionary, action: #selector(openDictionary), keyEquivalent: "d")
+        dictItem.target = self
+        menu.addItem(dictItem)
+
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: L10n.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
@@ -231,6 +235,12 @@ class StatusBarController: NSObject {
             try? config.save()
         }
         NSWorkspace.shared.open(configFile)
+    }
+
+    @objc private func openDictionary() {
+        Task { @MainActor in
+            DictionaryWindowController.present()
+        }
     }
 
     private func updateIcon() {

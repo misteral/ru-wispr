@@ -35,7 +35,22 @@ enum L10n {
     static var noRecordings: String { isRussian ? "Нет записей" : "No recordings" }
     static var reloadConfiguration: String { isRussian ? "Перезагрузить конфигурацию" : "Reload Configuration" }
     static var openConfiguration: String { isRussian ? "Открыть конфигурацию" : "Open Configuration" }
+    static var openDictionary: String { isRussian ? "Открыть словарь..." : "Open Dictionary..." }
     static var quit: String { isRussian ? "Выход" : "Quit" }
+
+    // MARK: - Dictionary editor
+
+    static var dictionaryTitle: String { isRussian ? "Словарь Dikto" : "Dikto Dictionary" }
+    static var dictionaryIntro: String {
+        isRussian
+            ? "Замените фразу, которую вы говорите, на текст, который Dikto вставит вместо неё."
+            : "Replace a phrase you say with the text Dikto should paste in its place."
+    }
+    static var dictionaryColumnPhrase: String { isRussian ? "Что говорю" : "Spoken phrase" }
+    static var dictionaryColumnReplacement: String { isRussian ? "Что вставить" : "Replacement" }
+    static var dictionaryDone: String { isRussian ? "Готово" : "Done" }
+    static var dictionaryAddTooltip: String { isRussian ? "Добавить замену" : "Add entry" }
+    static var dictionaryRemoveTooltip: String { isRussian ? "Удалить выбранные" : "Remove selected" }
 
     static func hotkey(_ value: String) -> String {
         isRussian ? "Клавиша: \(value)" : "Hotkey: \(value)"

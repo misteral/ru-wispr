@@ -63,9 +63,16 @@ public final class DictionaryManager: @unchecked Sendable {
 
     private let lock = NSLock()
     private var entries: [Entry] = []
+    /// Path the manager reads / writes for `reload`, `snapshot`, and `save`.
+    /// The shared instance uses the production iCloud location; tests can
+    /// inject a temp directory via `init(file:)` or `init(dictionary:file:)`.
+    private let fileURL: URL
 
-    /// Test seam: build a manager directly from an in-memory dictionary.
-    public init(dictionary: [String: String]) {
+    /// Test seam: build a manager directly from an in-memory dictionary. The
+    /// optional `file` argument routes `save` / `reload` calls to a sandboxed
+    /// path so tests don't clobber the user's real `dictionary.json`.
+    public init(dictionary: [String: String], file: URL? = nil) {
+        self.fileURL = file ?? Self.dictionaryFile
         entries = Self.compile(dictionary)
     }
 
@@ -77,6 +84,7 @@ public final class DictionaryManager: @unchecked Sendable {
 
     /// Test seam: load from an arbitrary file path (still seeds defaults if missing).
     public init(file: URL) {
+        self.fileURL = file
         let dict = Self.loadFromDisk(at: file)
         entries = Self.compile(dict)
     }
@@ -97,10 +105,46 @@ public final class DictionaryManager: @unchecked Sendable {
 
     /// Re-read the dictionary file. Useful if the user edits it at runtime.
     public func reload() {
-        let dict = Self.loadFromDisk(at: Self.dictionaryFile)
+        let dict = Self.loadFromDisk(at: fileURL)
         let compiled = Self.compile(dict)
         lock.lock()
         entries = compiled
+        lock.unlock()
+    }
+
+    /// Current entries on disk, sorted alphabetically by key. The dictionary
+    /// editor walks this snapshot — the in-memory `entries` are pre-compiled
+    /// regexes that can't be reversed to source phrases.
+    public func snapshot() -> [(key: String, value: String)] {
+        Self.loadFromDisk(at: fileURL)
+            .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
+            .map { (key: $0.key, value: $0.value) }
+    }
+
+    /// Persist user-edited entries and refresh the regex cache. Empty keys are
+    /// dropped; whitespace around keys is trimmed; on duplicate keys the last
+    /// occurrence wins (matches how decoding a dictionary literal would behave).
+    public func save(entries newEntries: [(key: String, value: String)]) throws {
+        var dict: [String: String] = [:]
+        for pair in newEntries {
+            let key = pair.key.trimmingCharacters(in: .whitespacesAndNewlines)
+            if key.isEmpty { continue }
+            dict[key] = pair.value
+        }
+
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(dict)
+        try data.write(to: fileURL, options: .atomic)
+
+        let compiled = Self.compile(dict)
+        lock.lock()
+        self.entries = compiled
         lock.unlock()
     }
 
