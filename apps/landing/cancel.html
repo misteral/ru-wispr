@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Платёж отменён · Dikto Pro</title>
+  <meta name="description" content="Платёж не был завершён. Можно попробовать снова или продолжить пользоваться триалом.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='24' fill='%237C3AED'/%3E%3Cg transform='translate(60,60)' fill='%23fff'%3E%3Crect x='-38' y='-10' width='12' height='20' rx='4'/%3E%3Crect x='-19' y='-24' width='12' height='48' rx='4'/%3E%3Crect x='-6' y='-34' width='12' height='68' rx='4'/%3E%3Crect x='7' y='-24' width='12' height='48' rx='4'/%3E%3Crect x='26' y='-10' width='12' height='20' rx='4'/%3E%3C/g%3E%3C/svg%3E">
+
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (function(){
+      var t=localStorage.getItem('theme');
+      if(!t)t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+      document.documentElement.setAttribute('data-theme',t);
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,500;9..40,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script defer data-domain="dikto.itbeaver.co" src="https://plausible.io/js/script.js"></script>
+
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#FDFCF8;--surface:#fff;--border:#1a1a1a;--text:#1a1a1a;--muted:#6b6b6b;
+      --accent:#7C3AED;--accent-light:#EDE9FE;
+      --shadow:3px 3px 0 var(--border);
+      --bw:2px;
+      --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',sans-serif;
+    }
+    [data-theme="dark"]{
+      --bg:#0f0f0f;--surface:#1a1a1a;--border:#333;--text:#e5e5e5;--muted:#999;
+      --accent:#A78BFA;--accent-light:#1e1633;--shadow:3px 3px 0 #000;
+    }
+    body{
+      font-family:var(--mono);background:var(--bg);color:var(--text);
+      line-height:1.65;font-size:14px;min-height:100vh;
+      display:flex;align-items:center;justify-content:center;padding:40px 24px;
+    }
+    .wrap{max-width:520px;width:100%}
+    .badge{
+      width:64px;height:64px;border-radius:50%;
+      background:var(--surface);color:var(--text);
+      border:var(--bw) solid var(--border);
+      display:flex;align-items:center;justify-content:center;
+      font-size:30px;margin-bottom:24px;
+      box-shadow:var(--shadow);
+    }
+    h1{
+      font-family:var(--sans);
+      font-size:clamp(28px,4.5vw,40px);font-weight:800;
+      letter-spacing:-.02em;line-height:1.2;margin-bottom:16px;
+    }
+    .lede{color:var(--muted);font-size:15px;margin-bottom:32px;line-height:1.7}
+
+    .cta{display:flex;gap:12px;flex-wrap:wrap}
+    a.btn-primary,a.btn-secondary{
+      display:inline-block;
+      border:var(--bw) solid var(--border);
+      box-shadow:var(--shadow);
+      padding:14px 24px;
+      font-family:var(--mono);font-size:13px;font-weight:500;
+      text-transform:uppercase;letter-spacing:.08em;
+      text-decoration:none;
+      transition:transform .12s,box-shadow .12s;
+    }
+    a.btn-primary{background:var(--accent);color:#fff}
+    a.btn-secondary{background:var(--surface);color:var(--text)}
+    a.btn-primary:hover,a.btn-secondary:hover{
+      transform:translate(2px,2px);box-shadow:1px 1px 0 var(--border);
+    }
+
+    .help{margin-top:32px;font-size:12px;color:var(--muted);line-height:1.8}
+    .help a{color:var(--accent);font-weight:500}
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="badge">×</div>
+  <h1>Платёж не завершён</h1>
+  <p class="lede">
+    Ничего страшного — никаких списаний не произошло. Можно попробовать
+    оплатить ещё раз или продолжить пользоваться триалом (14 дней без ограничений).
+  </p>
+
+  <div class="cta">
+    <a class="btn-primary" href="/buy.html">Попробовать снова</a>
+    <a class="btn-secondary" href="/">На главную</a>
+  </div>
+
+  <div class="help">
+    Возникла проблема с оплатой? Напишите на <a href="mailto:support@itbeaver.co">support@itbeaver.co</a><br>
+    или в <a href="https://t.me/dikto_support">Telegram</a> — поможем оформить покупку другим способом.
+  </div>
+</div>
+
+</body>
+</html>

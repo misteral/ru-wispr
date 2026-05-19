@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Dikto Pro — голосовой ввод по-русски для Mac">
+  <defs>
+    <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a1a1a" stroke-width="1" opacity="0.04"/>
+    </pattern>
+    <style>
+      .sans { font-family: "DM Sans", "Helvetica Neue", Arial, sans-serif; font-weight: 800; }
+      .mono { font-family: "IBM Plex Mono", "JetBrains Mono", Menlo, monospace; font-weight: 500; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="630" fill="#FDFCF8"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- Logo card -->
+  <g transform="translate(80,80)">
+    <rect x="0" y="0" width="120" height="120" rx="24" fill="#7C3AED"/>
+    <g transform="translate(60,60)" fill="#fff">
+      <rect x="-38" y="-10" width="12" height="20" rx="4"/>
+      <rect x="-19" y="-24" width="12" height="48" rx="4"/>
+      <rect x="-6" y="-34" width="12" height="68" rx="4"/>
+      <rect x="7" y="-24" width="12" height="48" rx="4"/>
+      <rect x="26" y="-10" width="12" height="20" rx="4"/>
+    </g>
+  </g>
+
+  <!-- Brand text -->
+  <text x="226" y="138" class="sans" font-size="46" fill="#1a1a1a">Dikto</text>
+  <text x="226" y="178" class="mono" font-size="18" fill="#7C3AED" letter-spacing="3">PRO · RU</text>
+
+  <!-- Tag pill -->
+  <g transform="translate(80,250)">
+    <rect x="0" y="0" width="356" height="38" fill="#EDE9FE" stroke="#1a1a1a" stroke-width="2"/>
+    <text x="20" y="25" class="mono" font-size="14" fill="#7C3AED" letter-spacing="2">ДЛЯ MAC НА APPLE SILICON</text>
+  </g>
+
+  <!-- Main headline -->
+  <text x="80" y="370" class="sans" font-size="74" fill="#1a1a1a">Голосовой ввод</text>
+  <text x="80" y="450" class="sans" font-size="74" fill="#7C3AED">по-русски.</text>
+
+  <!-- Sub-headline -->
+  <text x="80" y="510" class="mono" font-size="20" fill="#6b6b6b">Зажмите клавишу, скажите фразу — текст появится в курсоре.</text>
+  <text x="80" y="540" class="mono" font-size="20" fill="#6b6b6b">100% локально, без облака.</text>
+
+  <!-- Price card right side -->
+  <g transform="translate(820,250)">
+    <rect x="0" y="0" width="300" height="160" fill="#fff" stroke="#1a1a1a" stroke-width="2"/>
+    <rect x="0" y="0" width="300" height="160" fill="none" stroke="#1a1a1a" stroke-width="2" transform="translate(6,6)"/>
+    <rect x="0" y="0" width="300" height="34" fill="#1a1a1a"/>
+    <text x="20" y="22" class="mono" font-size="12" fill="#FDFCF8" letter-spacing="2">LIFETIME · RUB</text>
+    <text x="290" y="22" class="mono" font-size="12" fill="#FDFCF8" opacity="0.5" text-anchor="end">01/01</text>
+    <text x="20" y="100" class="sans" font-size="58" fill="#1a1a1a">1 990 ₽</text>
+    <text x="20" y="135" class="mono" font-size="14" fill="#6b6b6b">единоразово · 2 устройства</text>
+  </g>
+
+  <!-- Bottom domain bar -->
+  <rect x="0" y="590" width="1200" height="40" fill="#1a1a1a"/>
+  <text x="80" y="615" class="mono" font-size="14" fill="#FDFCF8" letter-spacing="2">DIKTO.ITBEAVER.CO</text>
+  <text x="1120" y="615" class="mono" font-size="14" fill="#FDFCF8" opacity="0.5" letter-spacing="2" text-anchor="end">14 ДНЕЙ ТРИАЛ</text>
+</svg>

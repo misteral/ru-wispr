@@ -8,4 +8,4 @@
 .playwright-mcp/
 default.profraw
 dist
-Resources/gigaam-v3-rnnt-mlx/
+**/gigaam-v3-rnnt-mlx/

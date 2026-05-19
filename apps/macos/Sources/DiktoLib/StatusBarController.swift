@@ -78,7 +78,7 @@ class StatusBarController: NSObject {
 
         let menu = NSMenu()
 
-        let titleItem = NSMenuItem(title: "Dikto v\(Dikto.version)", action: nil, keyEquivalent: "")
+        let titleItem = NSMenuItem(title: "\(ProductFlavor.current.displayName) v\(Dikto.version)", action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         menu.addItem(titleItem)
 
@@ -152,6 +152,11 @@ class StatusBarController: NSObject {
             menu.addItem(reprocessItem)
         }
 
+        if ProductFlavor.current.requiresLicense {
+            menu.addItem(NSMenuItem.separator())
+            appendLicenseItems(to: menu)
+        }
+
         menu.addItem(NSMenuItem.separator())
 
         let reloadItem = NSMenuItem(title: L10n.reloadConfiguration, action: #selector(reloadConfiguration), keyEquivalent: "r")
@@ -171,6 +176,52 @@ class StatusBarController: NSObject {
     @objc private func reloadConfiguration() {
         guard let delegate = NSApplication.shared.delegate as? AppDelegate else { return }
         delegate.reloadConfig()
+    }
+
+    private func appendLicenseItems(to menu: NSMenu) {
+        let status = LicenseManager.shared.status
+        let statusText: String
+        switch status {
+        case .trial(let daysLeft): statusText = L10n.trialDaysLeft(daysLeft)
+        case .active: statusText = L10n.licenseActive
+        case .trialExpired: statusText = L10n.trialExpiredBanner
+        case .invalid: statusText = L10n.licenseInvalid
+        case .notRequired: statusText = ""
+        }
+        if !statusText.isEmpty {
+            let info = NSMenuItem(title: statusText, action: nil, keyEquivalent: "")
+            info.isEnabled = false
+            menu.addItem(info)
+        }
+
+        switch status {
+        case .active:
+            let deact = NSMenuItem(title: L10n.menuDeactivate, action: #selector(deactivateLicense), keyEquivalent: "")
+            deact.target = self
+            menu.addItem(deact)
+        default:
+            let activate = NSMenuItem(title: L10n.menuActivate, action: #selector(showActivationWindow), keyEquivalent: "")
+            activate.target = self
+            menu.addItem(activate)
+            let buy = NSMenuItem(title: L10n.menuBuyLicense, action: #selector(openBuyURL), keyEquivalent: "")
+            buy.target = self
+            menu.addItem(buy)
+        }
+    }
+
+    @objc private func showActivationWindow() {
+        Task { @MainActor in
+            ActivationWindowController.present(blockingTrialExpired: false)
+        }
+    }
+
+    @objc private func openBuyURL() {
+        NSWorkspace.shared.open(ProductFlavor.current.buyURL)
+    }
+
+    @objc private func deactivateLicense() {
+        LicenseManager.shared.clear()
+        buildMenu()
     }
 
     @objc private func openConfiguration() {

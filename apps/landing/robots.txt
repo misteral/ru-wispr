@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /success.html
+Disallow: /cancel.html
+
+Sitemap: https://dikto.itbeaver.co/sitemap.xml

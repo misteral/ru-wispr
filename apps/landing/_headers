@@ -1,0 +1,60 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://plausible.io; img-src 'self' data:; connect-src 'self' https://plausible.io https://formspree.io https://api.buttondown.email; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://app.lava.top https://formspree.io
+
+/index.html
+  Cache-Control: public, max-age=3600, s-maxage=86400
+
+/buy.html
+  Cache-Control: public, max-age=600, s-maxage=3600
+
+/success.html
+  Cache-Control: no-store
+
+/cancel.html
+  Cache-Control: no-store
+
+/en/*
+  Cache-Control: public, max-age=3600, s-maxage=86400
+
+/legal/*
+  Cache-Control: public, max-age=86400, s-maxage=604800
+
+/demo.html
+  Cache-Control: public, max-age=3600, s-maxage=86400
+
+/robots.txt
+  Cache-Control: public, max-age=86400
+
+/sitemap.xml
+  Cache-Control: public, max-age=86400
+
+/llms.txt
+  Cache-Control: public, max-age=86400
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.svg
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.ico
+  Cache-Control: public, max-age=31536000, immutable

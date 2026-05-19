@@ -55,6 +55,16 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         L10n.language = config.language
         // Warm the dictionary singleton off the hot path.
         _ = DictionaryManager.shared
+
+        // Pro RU: stamp trial state and kick off async re-validation. Status
+        // is checked at hotkey-press time so a network blip doesn't stall the
+        // launch flow.
+        if ProductFlavor.current.requiresLicense {
+            LicenseManager.shared.touch()
+            if LicenseManager.shared.needsRevalidation {
+                Task.detached { await LicenseClient.shared.validateIfPossible() }
+            }
+        }
         if Config.effectiveMaxRecordings(config.maxRecordings) == 0 {
             RecordingStore.deleteAllRecordings()
         }
@@ -243,13 +253,24 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleKeyDown() {
         NSLog("[OW] handleKeyDown called, isReady=%d, isPressed=%d, isLocked=%d", isReady ? 1 : 0, isPressed ? 1 : 0, isLocked ? 1 : 0)
         guard isReady else { return }
-        
+
+        // Pro RU: refuse to record if the trial is over and no license is
+        // installed. We surface the activation window instead so the user
+        // has a path to unblock themselves without restarting the app.
+        if ProductFlavor.current.requiresLicense,
+           !LicenseManager.shared.status.allowsRecording {
+            Task { @MainActor in
+                ActivationWindowController.present(blockingTrialExpired: true)
+            }
+            return
+        }
+
         if isLocked {
             isLocked = false
             finishRecording()
             return
         }
-        
+
         guard !isPressed else { return }
         isPressed = true
         lastKeyDownTime = Date()
