@@ -36,6 +36,9 @@ Dikto — monorepo: macOS-приложение (free + Pro RU), лицензио
 | [docs/product-specs/backend-prd.md](docs/product-specs/backend-prd.md) | Backend PRD (платежи, чеки НПД, активация) |
 | [docs/exec-plans/tech-debt-tracker.md](docs/exec-plans/tech-debt-tracker.md) | Known tech debt |
 | [docs/exec-plans/dikto-pro-ru-roadmap.md](docs/exec-plans/dikto-pro-ru-roadmap.md) | Dikto Pro RU roadmap |
+| [docs/go-to-market/readiness.md](docs/go-to-market/readiness.md) | Что блокирует первые продажи (проверено прогоном) |
+| [docs/go-to-market/press-release.md](docs/go-to-market/press-release.md) | Пресс-релиз, черновик RU + EN |
+| [docs/go-to-market/outreach.md](docs/go-to-market/outreach.md) | Куда нести релиз: площадки и маршруты |
 | [docs/install-guide-ru.md](docs/install-guide-ru.md) | Russian install guide for Pro RU |
 | [apps/macos/README.md](apps/macos/README.md) | End-user readme (free) |
 | [apps/macos/README_RU.md](apps/macos/README_RU.md) | End-user readme (Pro RU) |
