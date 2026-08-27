@@ -36,6 +36,8 @@
 текст наружу — такого кода в нём нет. Единственные сетевые запросы платной
 версии — проверка лицензии при активации и повторно раз в семь дней; в них
 передаются только лицензионный ключ и анонимный хэш идентификатора устройства.
+Русская модель распознавания поставляется внутри установочного образа и
+ничего не докачивает.
 
 Русскоязычная версия использует модель GigaAM v3, адаптированную разработчиком
 для фреймворка MLX, — она рассчитана на русскую речь и выполняется нативно на
@@ -104,7 +106,8 @@ else's infrastructure. Dikto inverts the arrangement. Transcription runs locally
 on Apple Silicon, using either whisper.cpp or GigaAM depending on the language,
 and the only network requests the paid edition makes are a licence activation
 and a repeat check every seven days, carrying nothing but a licence key and an
-anonymous device hash.
+anonymous device hash. The Russian model ships inside the installer; the English
+edition downloads its Whisper model once, from Hugging Face, on first use.
 
 Dikto ships in two editions. The free edition is open source under the MIT
 licence, English-first, and available on GitHub — meaning the privacy claim can
@@ -159,7 +162,7 @@ Web: dikto.itbeaver.co
 
 | Утверждение в релизе | Подтверждение |
 |---|---|
-| Аудио и текст не покидают устройство | Единственные исходящие запросы во всей кодовой базе: `LicenseClient.swift` (activate/validate) и `ModelDownloader.swift` (скачивание модели Whisper). Ни в `AudioRecorder.swift`, ни в `Transcriber.swift`, ни в `GigaAMTranscriber.swift`, ни в `TextInserter.swift` сетевых вызовов нет |
+| Аудио и текст не покидают устройство | Проверено grep'ом по всему `Sources/DiktoLib/`: `URLSession` / `URLRequest` / `dataTask` есть **только** в `LicenseClient.swift`. Второй и последний выход в сеть — `ModelDownloader.swift`, вызывающий `/usr/bin/curl` за моделями Whisper с HuggingFace (модель GigaAM для Pro RU лежит в самом DMG и ничего не качает). Остальные подпроцессы локальные: `whisper-cpp`, `ffmpeg` для декодирования локального файла, `tccutil` |
 | Активация + проверка раз в 7 дней, в запросе только ключ и хэш устройства | `LicenseManager.revalidateInterval = 7 * 24 * 3600`; тело запроса — `ActivateRequest` в `LicenseClient.swift`: `licenseKey`, `fingerprint` (SHA-256 от `IOPlatformUUID`), `deviceId`, `appVersion`, `os` |
 | Push-to-talk: зажал → сказал → отпустил | `HotkeyManager.swift` + `AppDelegate.swift`; hotkey по умолчанию — правый Option (`ProductFlavor` / `Config`) |
 | Текст появляется в позиции курсора в любом приложении | `TextInserter.swift` — сохранение буфера обмена, симуляция ⌘V, восстановление буфера. Работает через системный ввод, а не через интеграции с приложениями |
@@ -189,6 +192,10 @@ Web: dikto.itbeaver.co
 - **Никакой заявленной поддержки диктовки в конкретных корпоративных
   сценариях** (медицина, юриспруденция) сверх примера использования — сертификаций
   под это у продукта нет.
+- **Про скачивание модели говорим сами.** В бесплатной англоязычной редакции
+  модель Whisper скачивается один раз с HuggingFace через `curl` — это не отправка
+  данных, но это сетевой запрос, и на Hacker News его найдут за минуту. Дешевле
+  сказать первым: в Pro RU модель уже внутри образа, в free — качается один раз.
 - **Формулировка о доступности выбирается по факту.** Пока нет работающей ссылки
   на скачивание, «available today» ставить нельзя — либо дата в будущем, либо
   «opening sales».

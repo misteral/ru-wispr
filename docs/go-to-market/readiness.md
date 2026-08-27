@@ -65,9 +65,9 @@
 - Приложение — menu-bar агент (`LSUIElement`), `dikto start` требует TCC-разрешений
   (микрофон + Accessibility). Я намеренно **не** запускал `start`: в headless-сессии
   это дало бы только зависшие диалоги разрешений. Проверка «работает у живого
-  пользователя» осталась за человеком, но код запуска не менялся с v0.19.0,
-  а `/Applications/Dikto.app` на этой машине установлен, то есть цикл сборки
-  и установки исторически проходил.
+  пользователя» осталась за человеком; косвенно в пользу неё — установленный
+  на этой машине `/Applications/Dikto.app`, то есть цикл сборки и установки
+  исторически проходил.
 
 ---
 
@@ -456,6 +456,8 @@ revocation-list (это статический JSON на том же Cloudflare 
 | B23 | `dist-pro-ru/` не в `.gitignore` (~450 МБ артефактов в рабочем дереве) | P2 | Корневой `.gitignore` содержит `dist`, чего недостаточно | 5 мин | — |
 | B24 | `@dikto_support` в Telegram, судя по всему, не занят, но уже опубликован на витрине | P2 | Пустой `og:description` на `t.me/dikto_support`; ссылки в `index.html:736`, `buy.html:236`, `success.html:140` | 15 мин | **Да — H5** |
 | B25 | MIT-копирайт репозитория оформлен на `human37`, а продавец по оферте — Бобров Александр | P2 (юр.) | `LICENSE:3` → `Copyright (c) 2026 human37`; `legal/terms.html` → «самозанятый Бобров Александр» | 15 мин | Да, сверить |
+| B26 | Сброс Accessibility-разрешения в Pro RU бьёт мимо: bundle ID захардкожен | P2 | `Permissions.swift:32` → `tccutil reset Accessibility co.itbeaver.dikto`, тогда как в Pro RU `ProductFlavor.bundleId == "ru.diktopro"`. У платного пользователя кнопка починки разрешений молча ничего не делает | 15 мин | — |
+| B27 | `ARCHITECTURE.md` обещает автоскачивание весов GigaAM, которого в коде нет | P2 | `docs/ARCHITECTURE.md` → «model weights downloaded on first use»; grep по `GigaAMTranscriber.swift` и `GigaAM/` не находит ни одного сетевого вызова — веса кладутся релизным скриптом или вручную. Для Pro RU это не проблема (модель в DMG), для free-редакции — сюрприз | 15 мин | — |
 
 **Сумма по P0** (вариант Б, оффлайн-лицензии): **3–5 рабочих дней** разработки,
 после того как закрыты H1 (ИНН), H2 (Lava) и H3 (чеки).
@@ -478,10 +480,14 @@ revocation-list (это статический JSON на том же Cloudflare 
   DMG можно было бы раздавать хоть завтра — не хватает только места, откуда его скачать.
 - **Подпись Developer ID на месте**, скрипт релиза Pro RU собирает и подписывает
   без вмешательства, путь нотаризации в скрипте прописан.
-- **Приватность — не маркетинг, а свойство кода.** Единственные исходящие
-  запросы во всей кодовой базе: активация лицензии, ревалидация раз в 7 дней и
-  скачивание модели Whisper (`ModelDownloader.swift`). Ни аудио, ни текст никуда
-  не отправляются — это можно утверждать в пресс-релизе без риска.
+- **Приватность — не маркетинг, а свойство кода.** Проверено grep'ом по всему
+  `Sources/DiktoLib/`: `URLSession` / `URLRequest` / `dataTask` встречаются
+  **только** в `LicenseClient.swift`. Единственный второй выход в сеть —
+  `ModelDownloader.swift`, который вызывает `/usr/bin/curl` за моделями Whisper
+  с HuggingFace. Все остальные подпроцессы локальные: `whisper-cpp`
+  (`Transcriber.swift:22`), `ffmpeg` для декодирования локального файла
+  (`GigaAMTranscriber.swift:358`), `tccutil` (`Permissions.swift:30`). Ни аудио,
+  ни текст никуда не отправляются — это можно утверждать в пресс-релизе без риска.
 - **Лендинг свёрстан целиком** — главная, покупка, success/cancel, три
   юридические страницы, английская версия, OG-картинка, `_headers` с CSP.
   Не хватает деплоя и одной ссылки на скачивание.
@@ -514,6 +520,10 @@ npm install && npx tsc --noEmit           # ✅ 0 ошибок
 npm test                                  # ✗ No test files found
 NODE_ENV=production DATABASE_URL=… TOKEN_HASH_PEPPER=… npx tsx src/server.ts
 curl /healthz /v1/activate /v1/validate /webhooks/lava
+
+# проверка обещания приватности
+grep -rn "URLSession|URLRequest|dataTask|downloadTask" apps/macos/Sources/DiktoLib/
+grep -rn "Process()" apps/macos/Sources/DiktoLib/
 
 # инфраструктура (только пассивное чтение — ничего не публиковалось)
 dig +short dikto.itbeaver.co api.dikto.itbeaver.co itbeaver.co
