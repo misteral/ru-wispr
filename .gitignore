@@ -7,5 +7,6 @@
 .claude/ralph-loop.local.md
 .playwright-mcp/
 default.profraw
-dist
+dist/
+dist-*/
 **/gigaam-v3-rnnt-mlx/
